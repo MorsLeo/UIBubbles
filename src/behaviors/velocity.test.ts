@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { createVelocityTracker } from "$src/behaviors/velocity";
+import { describe, expect, it } from "vitest";
 
 describe("createVelocityTracker", () => {
 	it("returns zero with no samples", () => {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { createBubbles } from "$src/index";
+import { describe, expect, it } from "vitest";
 
 describe("createBubbles", () => {
 	it("returns a manager", () => {

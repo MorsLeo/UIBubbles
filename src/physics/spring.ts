@@ -6,7 +6,8 @@ import type { AxisState } from "$src/types";
  * (semi-implicit Euler — stable at our step sizes and dirt cheap).
  */
 export const springStep = (state: AxisState, target: number, dt: number): AxisState => {
-	const acceleration = SPRING_STIFFNESS * (target - state.position) - SPRING_DAMPING * state.velocity;
+	const acceleration =
+		SPRING_STIFFNESS * (target - state.position) - SPRING_DAMPING * state.velocity;
 	const velocity = state.velocity + acceleration * dt;
 	return { position: state.position + velocity * dt, velocity };
 };

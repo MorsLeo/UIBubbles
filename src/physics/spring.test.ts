@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { springStep } from "$src/physics/spring";
 import type { AxisState } from "$src/types";
+import { describe, expect, it } from "vitest";
 
 const simulate = (initial: AxisState, target: number, seconds: number) => {
 	const dt = 1 / 240;

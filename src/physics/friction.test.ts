@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { FRICTION } from "$src/physics/config";
 import { frictionDecay, projectDistance } from "$src/physics/friction";
+import { describe, expect, it } from "vitest";
 
 describe("frictionDecay", () => {
 	it("is 1 for a zero-length step", () => {
