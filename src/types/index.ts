@@ -21,3 +21,18 @@ export interface BubbleManager {
 	remove(id: string): void;
 	destroy(): void;
 }
+
+/** Velocity in px/s. */
+export interface Velocity {
+	x: number;
+	y: number;
+}
+
+export interface VelocityTracker {
+	/** Records a pointer position at a timestamp (ms). */
+	addSample(x: number, y: number, time: number): void;
+	/** Velocity over the recent sample window, as of `now` (ms). */
+	getVelocity(now: number): Velocity;
+	/** Clears all samples (call on drag start). */
+	reset(): void;
+}
