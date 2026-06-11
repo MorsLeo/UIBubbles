@@ -1,13 +1,8 @@
-import { clampTop } from "$src/behaviors/clamp";
+import { clampTop, maxRestTop } from "$src/behaviors/clamp";
+import { runSimulation } from "$src/behaviors/simulate";
 import { chooseSide, setSnappedSide, sideRestLeft } from "$src/behaviors/snap";
 import { EDGE_MARGIN } from "$src/constants";
-import {
-	MAX_EDGE_DIP,
-	MAX_FRAME_DT,
-	REST_DISTANCE,
-	REST_VELOCITY,
-	RESTITUTION
-} from "$src/physics/config";
+import { MAX_EDGE_DIP, REST_DISTANCE, REST_VELOCITY, RESTITUTION } from "$src/physics/config";
 import { frictionDecay, projectDistance } from "$src/physics/friction";
 import { springStep } from "$src/physics/spring";
 import type { AxisState, Velocity } from "$src/types";
@@ -17,8 +12,9 @@ import type { AxisState, Velocity } from "$src/types";
  *
  * Horizontal: a damped spring toward the wall chosen by projecting the
  * release velocity, so it always lands on an edge and arrives as hot as
- * it was thrown. Vertical: pure inertia clamped at the top/bottom gap —
- * which is what makes an angled throw hit the wall and slide along it.
+ * it was thrown. Vertical: pure inertia with ricochet off the top/bottom
+ * gap — which is what makes an angled throw hit the wall and slide
+ * along it.
  *
  * Returns a cancel function (grabbing a bubble mid-flight).
  */
@@ -26,13 +22,22 @@ export const startFling = (el: HTMLElement, releaseVelocity: Velocity): (() => v
 	const rect = el.getBoundingClientRect();
 	const projectedCenterX = rect.left + rect.width / 2 + projectDistance(releaseVelocity.x);
 	const side = chooseSide(projectedCenterX);
-	const targetLeft = sideRestLeft(el, side);
+
+	// All viewport-derived targets are read live, per frame — the viewport
+	// can change mid-flight (zoom, resize, devtools), and a stale target
+	// would carry the bubble to a coordinate that no longer exists.
+	const targetLeft = (): number => sideRestLeft(el, side);
 
 	// A bubble released outside the vertical bounds (dragged off-screen)
 	// springs back to the violated edge instead of teleporting to it.
-	const maxTop = window.innerHeight - el.offsetHeight - EDGE_MARGIN;
-	const verticalReturnTarget =
-		rect.top < EDGE_MARGIN ? EDGE_MARGIN : rect.top > maxTop ? maxTop : undefined;
+	const verticalReturnEdge: "top" | "bottom" | undefined =
+		rect.top < EDGE_MARGIN ? "top" : rect.top > maxRestTop(el) ? "bottom" : undefined;
+	const verticalReturnTarget = (): number | undefined =>
+		verticalReturnEdge === "top"
+			? EDGE_MARGIN
+			: verticalReturnEdge === "bottom"
+				? maxRestTop(el)
+				: undefined;
 
 	// The off-screen dip cap arms only once the bubble is inside the screen:
 	// a throw from inside gets its overshoot capped at the wall, while a
@@ -43,11 +48,9 @@ export const startFling = (el: HTMLElement, releaseVelocity: Velocity): (() => v
 
 	let x: AxisState = { position: rect.left, velocity: releaseVelocity.x };
 	let y: AxisState = { position: rect.top, velocity: releaseVelocity.y };
-	let lastTime: number | undefined;
-	let frameId = 0;
 
 	const stepHorizontal = (dt: number) => {
-		x = springStep(x, targetLeft, dt);
+		x = springStep(x, targetLeft(), dt);
 		if (!dipCapArmed && x.position >= minDipLeft && x.position <= maxDipLeft()) {
 			dipCapArmed = true;
 		}
@@ -59,45 +62,41 @@ export const startFling = (el: HTMLElement, releaseVelocity: Velocity): (() => v
 	};
 
 	const stepVertical = (dt: number) => {
-		if (verticalReturnTarget !== undefined) {
-			y = springStep(y, verticalReturnTarget, dt);
+		const returnTarget = verticalReturnTarget();
+		if (returnTarget !== undefined) {
+			y = springStep(y, returnTarget, dt);
 			return;
 		}
 		y = { position: y.position + y.velocity * dt, velocity: y.velocity * frictionDecay(dt) };
-		const max = window.innerHeight - el.offsetHeight - EDGE_MARGIN;
-		if (y.position <= EDGE_MARGIN) y = { position: EDGE_MARGIN, velocity: -y.velocity * RESTITUTION };
+
+		const max = maxRestTop(el);
+		if (y.position <= EDGE_MARGIN)
+			y = { position: EDGE_MARGIN, velocity: -y.velocity * RESTITUTION };
 		else if (y.position >= max) y = { position: max, velocity: -y.velocity * RESTITUTION };
 	};
 
 	const isAtRest = (): boolean => {
+		const returnTarget = verticalReturnTarget();
 		const horizontal =
-			Math.abs(x.position - targetLeft) < REST_DISTANCE && Math.abs(x.velocity) < REST_VELOCITY;
+			Math.abs(x.position - targetLeft()) < REST_DISTANCE && Math.abs(x.velocity) < REST_VELOCITY;
 		const vertical =
 			Math.abs(y.velocity) < REST_VELOCITY &&
-			(verticalReturnTarget === undefined ||
-				Math.abs(y.position - verticalReturnTarget) < REST_DISTANCE);
+			(returnTarget === undefined || Math.abs(y.position - returnTarget) < REST_DISTANCE);
 		return horizontal && vertical;
 	};
 
-	const frame = (now: number) => {
-		const dt = Math.min((now - (lastTime ?? now)) / 1000, MAX_FRAME_DT);
-		lastTime = now;
-
+	return runSimulation((dt) => {
 		stepHorizontal(dt);
 		stepVertical(dt);
 
 		el.style.left = `${x.position}px`;
 		el.style.top = `${y.position}px`;
 
-		if (isAtRest()) {
-			el.style.left = `${targetLeft}px`;
-			el.style.top = `${clampTop(el, y.position)}px`;
-			setSnappedSide(el, side);
-			return;
-		}
-		frameId = requestAnimationFrame(frame);
-	};
+		if (!isAtRest()) return false;
 
-	frameId = requestAnimationFrame(frame);
-	return () => cancelAnimationFrame(frameId);
+		el.style.left = `${targetLeft()}px`;
+		el.style.top = `${clampTop(el, y.position)}px`;
+		setSnappedSide(el, side);
+		return true;
+	});
 };
