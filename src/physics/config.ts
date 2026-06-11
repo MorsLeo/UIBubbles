@@ -18,8 +18,13 @@ export const REST_VELOCITY = 10;
 /** Within this distance (px) of the target counts as arrived. */
 export const REST_DISTANCE = 0.5;
 
-/** Cap on a single simulation step (s), so tab-switch pauses don't explode the integration. */
-export const MAX_FRAME_DT = 0.064;
+/**
+ * Cap on a single simulation step (s). Kept near one real frame so a
+ * main-thread stall (panel mounts, tab switches) never integrates as a
+ * single giant step — a visible teleport. After a stall, motion just
+ * resumes smoothly from where it was.
+ */
+export const MAX_FRAME_DT = 0.02;
 
 /** Max distance (px) a thrown bubble may dip past the screen edge before the wall stops it. */
 export const MAX_EDGE_DIP = 20;

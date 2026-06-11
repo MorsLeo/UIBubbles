@@ -14,13 +14,15 @@ export type BubbleSide = "left" | "right";
 /** Internal per-bubble record kept by the manager. */
 export interface BubbleInstance {
 	el: HTMLElement;
+	/** Consumer callback for user-initiated dismissal. */
+	onDismiss?: () => void;
 	/** Tears down listeners, panel, and any running animation. */
 	cleanup: () => void;
 }
 
 /** Shows and hides a bubble's expanded content panel. */
 export interface PanelController {
-	/** Opens the panel (no-op if already open); it follows its bubble while visible. */
+	/** Opens the panel (no-op if already open); it follows the group while visible. */
 	show(): void;
 	hide(): void;
 	destroy(): void;
@@ -51,6 +53,8 @@ export interface GlideTarget {
 }
 
 export interface GlideHooks {
+	/** Starting velocity (px/s) — seeds a fast launch with the spring's long settling tail. */
+	initialVelocity?: Velocity;
 	/** Runs every simulation frame, after the element's position is written. */
 	onFrame?: () => void;
 	/** Fires only on natural arrival at the target. */
@@ -63,9 +67,41 @@ export interface DragHooks {
 	/** Pointer left the dead zone and a real drag began. */
 	onDragStart?: () => void;
 	/** Return true to take over the release and suppress the throw. */
-	onDragEnd?: () => boolean;
+	onDragEnd?: (velocity: Velocity) => boolean;
 	/** Released while captured by the dismiss target. */
 	onDismiss?: () => void;
+}
+
+/** A bubble as the group controller sees it. */
+export interface GroupMember {
+	id: string;
+	el: HTMLElement;
+	panel?: PanelController;
+}
+
+export interface GroupCallbacks {
+	/** Dismiss one bubble (fires its consumer onDismiss). */
+	remove(id: string): void;
+	/** Dismiss every bubble (group dragged onto the removal target). */
+	removeAll(): void;
+}
+
+/**
+ * Coordinates all bubbles: docked stacking, trail drags, group flings,
+ * and routing of taps/drags/dismissals from individual bubbles.
+ */
+export interface BubbleGroup {
+	addMember(member: GroupMember): void;
+	removeMember(id: string): void;
+	/** Centroid of the docked members (x center, bottom edge) — panels hang below it. */
+	attachPoint(): { x: number; bottom: number } | undefined;
+	/** Animates the bubble off-screen, then calls `onGone` (programmatic removal). */
+	retireMember(id: string, onGone: () => void): void;
+	onTap(id: string): void;
+	onDragStart(id: string): void;
+	onDragEnd(id: string, velocity: Velocity): boolean;
+	onDismiss(id: string): void;
+	handleResize(): void;
 }
 
 /** Drives the bubble while the dismiss target holds it, or while it escapes back to the pointer. */
@@ -88,17 +124,6 @@ export interface DismissZone {
 	/** Animates the target back off-screen (call at release). `onHidden` fires once it's gone. */
 	hide(onHidden?: () => void): void;
 	destroy(): void;
-}
-
-/** Toggles a bubble between its docked spot and the active (top center) spot. */
-export interface ActivationController {
-	toggle(): void;
-	/** Drag began: stops any glide; the active state survives the drag. */
-	onDragStart(): void;
-	/** Handles release of an active bubble (returns it to top center). True when handled. */
-	onDragEnd(): boolean;
-	/** Cancels any glide and clears the active state without a return trip. */
-	interrupt(): void;
 }
 
 export interface VelocityTracker {

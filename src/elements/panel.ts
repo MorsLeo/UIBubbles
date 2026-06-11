@@ -1,56 +1,99 @@
-import { EDGE_MARGIN } from "$src/constants";
+import { EDGE_MARGIN, Z_PANEL } from "$src/constants";
 import { BUBBLE_SIZE } from "$src/elements/bubble";
 import type { PanelController } from "$src/types";
 
 /** Gap between the bubble and the panel below it. */
-const PANEL_GAP = 12;
+const PANEL_GAP = 18;
 
 /** Panel top edge when the bubble rests at the active (top center) spot. */
 const PANEL_TOP = EDGE_MARGIN + BUBBLE_SIZE + PANEL_GAP;
 
-const FADE_MS = 150;
+const SHOW_MS = 150;
+
+/** Faster than the show: the exit rides the departing group and should read as a flick. */
+const HIDE_MS = 120;
+
+const SURFACE_COLOR = "#1c1c1e";
+
+/** Side length of the rotated-square caret poking out of the panel top. */
+const CARET_SIZE = 12;
+
+/** Keeps the caret clear of the surface's rounded corners. */
+const CARET_INSET = 16;
 
 /**
  * The expanded content panel. A plain fixed overlay rather than a
- * popover: the top layer would force the panel above the bubble, and
- * the bubble must always paint on top (a bubble dragged away slides
- * over the fading panel, never behind it). Same z-index as the bubble,
- * appended before it, so DOM order keeps the bubble on top.
+ * popover: the top layer would force the panel above the bubbles, and
+ * bubbles must always paint on top (a bubble dragged away slides over
+ * the fading panel, never behind it) — hence the layered z constants.
  *
- * While visible — fade-out included — the panel follows its bubble
- * every frame, centered beneath it, so it rides along with glides,
- * drags, and resizes.
+ * While visible — fade-out included — the panel follows the group
+ * every frame: centered under the flock's centroid, clamped to the
+ * screen margins. With no attach point (group emptied) it freezes in
+ * place and finishes its fade there. The caret along its top edge aims
+ * at this panel's own bubble.
  */
-export const createPanel = (bubble: HTMLElement, content: HTMLElement): PanelController => {
+export const createPanel = (
+	attachPoint: () => { x: number; bottom: number } | undefined,
+	bubble: HTMLElement,
+	content: HTMLElement
+): PanelController => {
 	const el = document.createElement("div");
-	el.setAttribute("role", "dialog");
 	Object.assign(el.style, {
 		position: "fixed",
 		display: "none",
 		flexDirection: "column",
-		zIndex: "2147483647",
+		zIndex: `${Z_PANEL}`,
 		transformOrigin: "top center",
 		width: `min(360px, calc(100vw - ${EDGE_MARGIN * 2}px))`,
-		maxHeight: `calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px)`,
-		// The panel never scrolls — it constrains. As a flex column it passes
-		// the height limit down so content can shrink and scroll its own
-		// interior regions instead of putting a scrollbar on the rounded edge.
+		maxHeight: `calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px)`
+	} satisfies Partial<CSSStyleDeclaration>);
+
+	const caret = document.createElement("div");
+	Object.assign(caret.style, {
+		position: "absolute",
+		top: `${-CARET_SIZE / 2}px`,
+		width: `${CARET_SIZE}px`,
+		height: `${CARET_SIZE}px`,
+		rotate: "45deg",
+		background: SURFACE_COLOR
+	} satisfies Partial<CSSStyleDeclaration>);
+
+	// The surface owns background, clipping, and the height constraint —
+	// it never scrolls, it constrains, so content scrolls its own interior
+	// regions instead of putting a scrollbar against the rounded edge.
+	const surface = document.createElement("div");
+	Object.assign(surface.style, {
+		display: "flex",
+		flexDirection: "column",
+		minHeight: "0",
 		overflow: "hidden",
 		borderRadius: "16px",
-		background: "#1c1c1e",
+		background: SURFACE_COLOR,
 		color: "#ffffff",
 		boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5)"
 	} satisfies Partial<CSSStyleDeclaration>);
 
-	el.appendChild(content);
+	surface.appendChild(content);
+	el.appendChild(caret);
+	el.appendChild(surface);
 	document.body.appendChild(el);
 
 	const position = () => {
-		const rect = bubble.getBoundingClientRect();
+		const point = attachPoint();
+		if (point === undefined) return;
+
 		const maxLeft = window.innerWidth - el.offsetWidth - EDGE_MARGIN;
-		const centered = rect.left + rect.width / 2 - el.offsetWidth / 2;
-		el.style.left = `${Math.min(Math.max(centered, EDGE_MARGIN), maxLeft)}px`;
-		el.style.top = `${rect.bottom + PANEL_GAP}px`;
+		const centered = point.x - el.offsetWidth / 2;
+		const left = Math.min(Math.max(centered, EDGE_MARGIN), maxLeft);
+		el.style.left = `${left}px`;
+		el.style.top = `${point.bottom + PANEL_GAP}px`;
+
+		// The caret aims at this panel's own bubble, not the panel center.
+		const bubbleRect = bubble.getBoundingClientRect();
+		const aimed = bubbleRect.left + bubbleRect.width / 2 - left - CARET_SIZE / 2;
+		const maxCaret = el.offsetWidth - CARET_INSET - CARET_SIZE;
+		caret.style.left = `${Math.min(Math.max(aimed, CARET_INSET), maxCaret)}px`;
 	};
 
 	let followFrame = 0;
@@ -78,16 +121,19 @@ export const createPanel = (bubble: HTMLElement, content: HTMLElement): PanelCon
 				{ opacity: 0, scale: "0.95" },
 				{ opacity: 1, scale: "1" }
 			],
-			{ duration: FADE_MS, easing: "ease-out" }
+			{ duration: SHOW_MS, easing: "ease-out" }
 		);
 	};
 
 	const hide = () => {
 		if (!isOpen() || hideAnimation) return;
-		hideAnimation = el.animate([{ opacity: 1 }, { opacity: 0 }], {
-			duration: FADE_MS,
-			easing: "ease-in"
-		});
+		hideAnimation = el.animate(
+			[
+				{ opacity: 1, scale: "1" },
+				{ opacity: 0, scale: "0.97" }
+			],
+			{ duration: HIDE_MS, easing: "ease-in" }
+		);
 		hideAnimation.onfinish = () => {
 			el.style.display = "none";
 			cancelAnimationFrame(followFrame);

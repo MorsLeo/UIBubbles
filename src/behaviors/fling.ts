@@ -16,9 +16,14 @@ import type { AxisState, Velocity } from "$src/types";
  * gap — which is what makes an angled throw hit the wall and slide
  * along it.
  *
- * Returns a cancel function (grabbing a bubble mid-flight).
+ * Returns a cancel function (grabbing a bubble mid-flight). `onRest`
+ * fires only on natural arrival.
  */
-export const startFling = (el: HTMLElement, releaseVelocity: Velocity): (() => void) => {
+export const startFling = (
+	el: HTMLElement,
+	releaseVelocity: Velocity,
+	onRest?: () => void
+): (() => void) => {
 	const rect = el.getBoundingClientRect();
 	const projectedCenterX = rect.left + rect.width / 2 + projectDistance(releaseVelocity.x);
 	const side = chooseSide(projectedCenterX);
@@ -97,6 +102,7 @@ export const startFling = (el: HTMLElement, releaseVelocity: Velocity): (() => v
 		el.style.left = `${targetLeft()}px`;
 		el.style.top = `${clampTop(el, y.position)}px`;
 		setSnappedSide(el, side);
+		onRest?.();
 		return true;
 	});
 };

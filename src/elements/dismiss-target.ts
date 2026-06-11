@@ -1,3 +1,4 @@
+import { Z_DISMISS_TARGET } from "$src/constants";
 import { BUBBLE_SIZE } from "$src/elements/bubble";
 
 export const DISMISS_TARGET_SIZE = BUBBLE_SIZE * 2;
@@ -30,8 +31,8 @@ export const createDismissTargetElement = (): DismissTargetElement => {
 		display: "none",
 		width: `${DISMISS_TARGET_SIZE}px`,
 		height: `${DISMISS_TARGET_SIZE}px`,
-		// One below the bubble, which must stay visible above the target.
-		zIndex: "2147483646",
+		// Below every bubble: captured bubbles ride on top of the target.
+		zIndex: `${Z_DISMISS_TARGET}`,
 		pointerEvents: "none",
 		alignItems: "center",
 		justifyContent: "center"

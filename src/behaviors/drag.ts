@@ -94,8 +94,9 @@ export const makeDraggable = (
 					follower?.cancel();
 					dismissZone?.hide();
 
-					if (!hooks.onDragEnd?.()) {
-						cancelFling = startFling(el, tracker.getVelocity(e.timeStamp));
+					const velocity = tracker.getVelocity(e.timeStamp);
+					if (!hooks.onDragEnd?.(velocity)) {
+						cancelFling = startFling(el, velocity);
 					}
 				}
 			} else if (e.type === "pointerup") {

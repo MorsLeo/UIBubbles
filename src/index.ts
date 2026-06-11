@@ -1,13 +1,10 @@
-import { createActivation } from "$src/behaviors/activate";
-import { clampTop } from "$src/behaviors/clamp";
 import { createDismissZone } from "$src/behaviors/dismiss";
 import { makeDraggable } from "$src/behaviors/drag";
-import { startFling } from "$src/behaviors/fling";
-import { watchWindowResize } from "$src/behaviors/resize";
-import { EDGE_MARGIN } from "$src/constants";
+import { createBubbleGroup } from "$src/behaviors/group";
+import { MAX_BUBBLES } from "$src/constants";
 import { createBubbleElement } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
-import type { BubbleInstance, BubbleManager } from "$src/types";
+import type { BubbleGroup, BubbleInstance, BubbleManager, DismissZone } from "$src/types";
 
 export type { BubbleManager, BubbleOptions, BubbleSide } from "$src/types";
 
@@ -18,86 +15,84 @@ export type { BubbleManager, BubbleOptions, BubbleSide } from "$src/types";
 export const createBubbles = (): BubbleManager => {
 	const bubbles = new Map<string, BubbleInstance>();
 
-	const dispose = (bubble: BubbleInstance) => {
-		bubble.cleanup();
-		bubble.el.remove();
-	};
+	// One dismiss target and one group coordinate every bubble; created
+	// lazily so constructing a manager touches no DOM.
+	let zone: DismissZone | undefined;
+	let group: BubbleGroup | undefined;
 
 	const removeById = (id: string) => {
 		const bubble = bubbles.get(id);
-		if (bubble) dispose(bubble);
+		if (!bubble) return;
+
+		bubble.cleanup();
+		bubble.el.remove();
 		bubbles.delete(id);
+		group?.removeMember(id);
+	};
+
+	const dismissById = (id: string) => {
+		const bubble = bubbles.get(id);
+		removeById(id);
+		bubble?.onDismiss?.();
+	};
+
+	const onResize = () => group?.handleResize();
+
+	const ensureGroup = (): BubbleGroup => {
+		if (group) return group;
+
+		zone = createDismissZone();
+		group = createBubbleGroup(zone, {
+			remove: dismissById,
+			removeAll: () => {
+				for (const id of [...bubbles.keys()]) dismissById(id);
+			}
+		});
+		window.addEventListener("resize", onResize);
+		return group;
 	};
 
 	return {
 		add(options) {
-			const el = createBubbleElement();
+			if (bubbles.size >= MAX_BUBBLES || bubbles.has(options.id)) return;
+			const bubbleGroup = ensureGroup();
 
-			// Panel first, bubble after: same z-index, so DOM order keeps the
-			// bubble painting above the panel.
-			const panel = options.content ? createPanel(el, options.content) : undefined;
-
-			const activation = createActivation(el, panel);
-
-			// The entrance fling isn't owned by drag, so first interaction has
-			// to cancel it here — otherwise two simulations fight over position.
-			let cancelEntrance: (() => void) | undefined;
-			const clearEntrance = () => {
-				cancelEntrance?.();
-				cancelEntrance = undefined;
-			};
-
-			const dismissZone = createDismissZone();
+			const el = createBubbleElement(options.icon);
+			const panel = options.content
+				? createPanel(() => bubbleGroup.attachPoint(), el, options.content)
+				: undefined;
 
 			makeDraggable(
 				el,
 				{
-					onTap: () => {
-						clearEntrance();
-						activation.toggle();
-					},
-					onDragStart: () => {
-						clearEntrance();
-						activation.onDragStart();
-					},
-					onDragEnd: activation.onDragEnd,
-					onDismiss: () => {
-						removeById(options.id);
-						options.onDismiss?.();
-					}
+					onTap: () => bubbleGroup.onTap(options.id),
+					onDragStart: () => bubbleGroup.onDragStart(options.id),
+					onDragEnd: (velocity) => bubbleGroup.onDragEnd(options.id, velocity),
+					onDismiss: () => bubbleGroup.onDismiss(options.id)
 				},
-				dismissZone
+				zone
 			);
 
 			document.body.appendChild(el);
+			bubbleGroup.addMember({ id: options.id, el, panel });
 
-			// Born just off-screen at dock height, then flung in with zero
-			// velocity: the standard physics carry it to the right-side rest
-			// (and stamp the snapped side, so resize/zoom anchoring holds).
-			el.style.left = `${window.innerWidth + EDGE_MARGIN}px`;
-			el.style.top = `${clampTop(el, (window.innerHeight - el.offsetHeight) / 2)}px`;
-			cancelEntrance = startFling(el, { x: 0, y: 0 });
-
-			const unwatchResize = watchWindowResize(el);
 			bubbles.set(options.id, {
 				el,
-				cleanup: () => {
-					clearEntrance();
-					unwatchResize();
-					activation.interrupt();
-					panel?.destroy();
-					dismissZone.destroy();
-				}
+				onDismiss: options.onDismiss,
+				cleanup: () => panel?.destroy()
 			});
 		},
 		remove(id) {
-			const bubble = bubbles.get(id);
-			if (bubble) dispose(bubble);
-			bubbles.delete(id);
+			if (!bubbles.has(id)) return;
+
+			// Programmatic removal animates the bubble off-screen first.
+			if (group) group.retireMember(id, () => removeById(id));
+			else removeById(id);
 		},
 		destroy() {
-			for (const bubble of bubbles.values()) dispose(bubble);
-			bubbles.clear();
+			for (const id of [...bubbles.keys()]) removeById(id);
+			zone?.destroy();
+			window.removeEventListener("resize", onResize);
 		}
 	};
 };

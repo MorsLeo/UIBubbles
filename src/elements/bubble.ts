@@ -1,3 +1,5 @@
+import { Z_BUBBLE_TOP } from "$src/constants";
+
 export const BUBBLE_SIZE = 56;
 
 /** Pixels added to the visual diameter on hover (~1.07x). */
@@ -34,9 +36,10 @@ const createChatIcon = (): SVGSVGElement => {
 /**
  * The visible circle. Lives inside the positioned element so hover growth
  * is a real size change (always crisp) instead of a transform scale, which
- * blurs the rasterized layer.
+ * blurs the rasterized layer. Shows the consumer's icon, or the default
+ * chat glyph when none is given.
  */
-const createSurface = (): HTMLElement => {
+const createSurface = (icon?: HTMLElement): HTMLElement => {
 	const surface = document.createElement("div");
 	Object.assign(surface.style, {
 		width: `${SURFACE_SIZE}px`,
@@ -52,17 +55,17 @@ const createSurface = (): HTMLElement => {
 		transition: "scale 150ms ease",
 		pointerEvents: "none"
 	} satisfies Partial<CSSStyleDeclaration>);
-	surface.appendChild(createChatIcon());
+	surface.appendChild(icon ?? createChatIcon());
 	return surface;
 };
 
-export const createBubbleElement = (): HTMLElement => {
+export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 	const el = document.createElement("div");
 	Object.assign(el.style, {
 		position: "fixed",
 		width: `${BUBBLE_SIZE}px`,
 		height: `${BUBBLE_SIZE}px`,
-		zIndex: "2147483647",
+		zIndex: `${Z_BUBBLE_TOP}`,
 		cursor: "pointer",
 		touchAction: "none",
 		userSelect: "none",
@@ -71,7 +74,7 @@ export const createBubbleElement = (): HTMLElement => {
 		justifyContent: "center"
 	} satisfies Partial<CSSStyleDeclaration>);
 
-	const surface = createSurface();
+	const surface = createSurface(icon);
 	el.appendChild(surface);
 
 	let hovered = false;

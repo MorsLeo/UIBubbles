@@ -14,8 +14,8 @@ export const startGlide = (
 	hooks: GlideHooks = {}
 ): (() => void) => {
 	const rect = el.getBoundingClientRect();
-	let x: AxisState = { position: rect.left, velocity: 0 };
-	let y: AxisState = { position: rect.top, velocity: 0 };
+	let x: AxisState = { position: rect.left, velocity: hooks.initialVelocity?.x ?? 0 };
+	let y: AxisState = { position: rect.top, velocity: hooks.initialVelocity?.y ?? 0 };
 
 	return runSimulation((dt) => {
 		const { left, top } = target();
