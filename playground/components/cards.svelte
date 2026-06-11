@@ -83,8 +83,8 @@
 			class="flex w-48 cursor-pointer flex-col items-start gap-1 rounded-xl border p-6 text-left transition-colors {spawned[
 				card.id
 			]
-				? 'border-zinc-600 bg-white/5'
-				: 'border-zinc-800 hover:bg-white/5'}"
+				? 'border-zinc-600 bg-zinc-900'
+				: 'border-zinc-800 bg-black hover:bg-zinc-900'}"
 		>
 			<card.icon color={card.iconColor} size={20} />
 			<span class="mt-2 text-sm font-semibold text-white">{card.title}</span>

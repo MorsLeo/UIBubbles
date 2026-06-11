@@ -4,6 +4,18 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>bubble playground</title>
+		<style>
+			/* Dot grid fading into the page background at the center; colors
+			   ride the Tailwind palette variables that app.css defines. */
+			body {
+				background-image:
+					radial-gradient(900px circle at 50% 40%, var(--color-black), transparent 70%),
+					radial-gradient(var(--color-zinc-900) 1px, transparent 1px);
+				background-size:
+					100% 100%,
+					40px 40px;
+			}
+		</style>
 	</head>
 	<body class="min-h-screen bg-black">
 		<script type="module" src="/playground/main.ts"></script>
