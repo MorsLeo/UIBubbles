@@ -85,8 +85,8 @@ export interface DismissZone {
 	captured(): boolean;
 	/** Center of the target circle in viewport coordinates. */
 	center(): { x: number; y: number };
-	/** Animates the target back off-screen (call at release). */
-	hide(): void;
+	/** Animates the target back off-screen (call at release). `onHidden` fires once it's gone. */
+	hide(onHidden?: () => void): void;
 	destroy(): void;
 }
 

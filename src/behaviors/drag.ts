@@ -83,15 +83,20 @@ export const makeDraggable = (
 			el.removeEventListener("pointercancel", onEnd);
 
 			if (dragging) {
-				follower?.cancel();
+				if (dismissZone?.captured()) {
+					// The capture hold keeps running, so the bubble rides the
+					// target off-screen; removal waits until the pair is gone.
+					dismissZone.hide(() => {
+						follower?.cancel();
+						hooks.onDismiss?.();
+					});
+				} else {
+					follower?.cancel();
+					dismissZone?.hide();
 
-				const captured = dismissZone?.captured() ?? false;
-				dismissZone?.hide();
-
-				if (captured) {
-					hooks.onDismiss?.();
-				} else if (!hooks.onDragEnd?.()) {
-					cancelFling = startFling(el, tracker.getVelocity(e.timeStamp));
+					if (!hooks.onDragEnd?.()) {
+						cancelFling = startFling(el, tracker.getVelocity(e.timeStamp));
+					}
 				}
 			} else if (e.type === "pointerup") {
 				hooks.onTap?.();
