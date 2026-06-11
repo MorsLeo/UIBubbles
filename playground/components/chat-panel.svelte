@@ -1,36 +1,41 @@
 <script lang="ts">
+	import chatIcon from "$playground/icons/chat.svg?raw";
 	import chevronLeftIcon from "$playground/icons/chevron-left.svg?raw";
 	import sendIcon from "$playground/icons/send.svg?raw";
 </script>
 
-<div class="flex h-105 flex-col font-sans">
-	<header class="flex items-center gap-2.5 border-b border-zinc-800 px-4 py-3">
+<div class="flex h-105 min-h-0 flex-col font-sans">
+	<header class="flex items-center gap-3 border-b border-zinc-800 p-3">
 		<button
 			type="button"
 			aria-label="Back"
-			class="-ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white"
+			class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:bg-white/10"
 		>
 			{@html chevronLeftIcon}
 		</button>
-		<div class="flex min-w-0 flex-col gap-0.5">
-			<span class="text-sm font-semibold">Chat Support</span>
-			<span class="flex items-center gap-1.5 text-xs text-zinc-400">
-				<span class="size-2 shrink-0 rounded-full bg-green-500"></span>
-				Online — typically replies in a few minutes
-			</span>
+		<div
+			class="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-white [&_svg]:size-4"
+		>
+			{@html chatIcon}
+		</div>
+		<div class="flex min-w-0 flex-col">
+			<span class="truncate text-sm font-semibold">Chat Support</span>
+			<span class="truncate text-xs text-zinc-400">Typically replies in a few minutes</span>
 		</div>
 	</header>
-	<div class="flex-1"></div>
+	<div class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto">
+		<span class="text-sm text-zinc-500">No messages yet</span>
+	</div>
 	<footer class="flex items-center gap-2 p-3">
 		<input
 			type="text"
 			placeholder="Message"
-			class="h-11 min-w-0 flex-1 rounded-full bg-zinc-800 px-4.5 text-sm text-white outline-none"
+			class="h-11 min-w-0 flex-1 rounded-md bg-zinc-800 px-4.5 text-sm text-white outline-none"
 		/>
 		<button
 			type="button"
 			aria-label="Send"
-			class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black [&_svg]:size-4.5"
+			class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md bg-white text-black [&_svg]:size-4.5"
 		>
 			{@html sendIcon}
 		</button>

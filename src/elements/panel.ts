@@ -27,11 +27,15 @@ export const createPanel = (bubble: HTMLElement, content: HTMLElement): PanelCon
 	Object.assign(el.style, {
 		position: "fixed",
 		display: "none",
+		flexDirection: "column",
 		zIndex: "2147483647",
 		transformOrigin: "top center",
 		width: `min(360px, calc(100vw - ${EDGE_MARGIN * 2}px))`,
 		maxHeight: `calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px)`,
-		overflow: "auto",
+		// The panel never scrolls — it constrains. As a flex column it passes
+		// the height limit down so content can shrink and scroll its own
+		// interior regions instead of putting a scrollbar on the rounded edge.
+		overflow: "hidden",
 		borderRadius: "16px",
 		background: "#1c1c1e",
 		color: "#ffffff",
@@ -66,7 +70,7 @@ export const createPanel = (bubble: HTMLElement, content: HTMLElement): PanelCon
 			return;
 		}
 		if (isOpen()) return;
-		el.style.display = "block";
+		el.style.display = "flex";
 		position();
 		followFrame = requestAnimationFrame(followLoop);
 		el.animate(
