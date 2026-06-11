@@ -1,10 +1,15 @@
+import { createCaptureFollower } from "$src/behaviors/capture";
 import { startFling } from "$src/behaviors/fling";
 import { clearSnappedSide } from "$src/behaviors/snap";
 import { createVelocityTracker } from "$src/behaviors/velocity";
 import { TAP_DRAG_THRESHOLD } from "$src/constants";
-import type { DragHooks } from "$src/types";
+import type { DismissZone, DragHooks } from "$src/types";
 
-export const makeDraggable = (el: HTMLElement, hooks: DragHooks = {}): void => {
+export const makeDraggable = (
+	el: HTMLElement,
+	hooks: DragHooks = {},
+	dismissZone?: DismissZone
+): void => {
 	const tracker = createVelocityTracker();
 	let cancelFling: (() => void) | undefined;
 
@@ -23,7 +28,16 @@ export const makeDraggable = (el: HTMLElement, hooks: DragHooks = {}): void => {
 		const startY = event.clientY;
 		let offsetX = 0;
 		let offsetY = 0;
+		let lastX = event.clientX;
+		let lastY = event.clientY;
 		let dragging = false;
+
+		const follower =
+			dismissZone &&
+			createCaptureFollower(el, dismissZone, () => ({
+				left: lastX - offsetX,
+				top: lastY - offsetY
+			}));
 
 		el.setPointerCapture(event.pointerId);
 
@@ -41,15 +55,21 @@ export const makeDraggable = (el: HTMLElement, hooks: DragHooks = {}): void => {
 			offsetY = e.clientY - rect.top;
 
 			el.style.cursor = "grabbing";
+			dismissZone?.show();
 		};
 
 		const onMove = (e: PointerEvent) => {
 			tracker.addSample(e.clientX, e.clientY, e.timeStamp);
+			lastX = e.clientX;
+			lastY = e.clientY;
 
 			if (!dragging) {
 				if (Math.hypot(e.clientX - startX, e.clientY - startY) < TAP_DRAG_THRESHOLD) return;
 				beginDrag(e);
 			}
+
+			// Capture (and the escape back from it) wins over the pointer.
+			if (follower?.update(e.clientX, e.clientY)) return;
 
 			el.style.left = `${e.clientX - offsetX}px`;
 			el.style.top = `${e.clientY - offsetY}px`;
@@ -63,7 +83,14 @@ export const makeDraggable = (el: HTMLElement, hooks: DragHooks = {}): void => {
 			el.removeEventListener("pointercancel", onEnd);
 
 			if (dragging) {
-				if (!hooks.onDragEnd?.()) {
+				follower?.cancel();
+
+				const captured = dismissZone?.captured() ?? false;
+				dismissZone?.hide();
+
+				if (captured) {
+					hooks.onDismiss?.();
+				} else if (!hooks.onDragEnd?.()) {
 					cancelFling = startFling(el, tracker.getVelocity(e.timeStamp));
 				}
 			} else if (e.type === "pointerup") {

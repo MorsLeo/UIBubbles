@@ -5,6 +5,8 @@ export interface BubbleOptions {
 	icon?: HTMLElement;
 	/** Content shown in the expanded panel. */
 	content?: HTMLElement;
+	/** Fires after the user dismisses the bubble via the removal target. */
+	onDismiss?: () => void;
 }
 
 export type BubbleSide = "left" | "right";
@@ -62,6 +64,30 @@ export interface DragHooks {
 	onDragStart?: () => void;
 	/** Return true to take over the release and suppress the throw. */
 	onDragEnd?: () => boolean;
+	/** Released while captured by the dismiss target. */
+	onDismiss?: () => void;
+}
+
+/** Drives the bubble while the dismiss target holds it, or while it escapes back to the pointer. */
+export interface CaptureFollower {
+	/** Feed pointer positions; true while capture/escape owns the bubble's position. */
+	update(x: number, y: number): boolean;
+	/** Stops whichever simulation is running (release or drag end). */
+	cancel(): void;
+}
+
+/** The drag-to-dismiss target shown while a bubble is dragged. */
+export interface DismissZone {
+	/** Animates the target in from off-screen bottom (call at drag start). */
+	show(): void;
+	/** Updates capture from the pointer position; true while captured. */
+	track(x: number, y: number): boolean;
+	captured(): boolean;
+	/** Center of the target circle in viewport coordinates. */
+	center(): { x: number; y: number };
+	/** Animates the target back off-screen (call at release). */
+	hide(): void;
+	destroy(): void;
 }
 
 /** Toggles a bubble between its docked spot and the active (top center) spot. */
