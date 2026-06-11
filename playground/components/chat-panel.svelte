@@ -3,113 +3,36 @@
 	import sendIcon from "$playground/icons/send.svg?raw";
 </script>
 
-<div class="panel">
-	<header>
-		<button type="button" class="back" aria-label="Back">{@html chevronLeftIcon}</button>
-		<div class="heading">
-			<span class="title">Chat Support</span>
-			<span class="status">
-				<span class="dot"></span>
+<div class="flex h-105 flex-col font-sans">
+	<header class="flex items-center gap-2.5 border-b border-zinc-800 px-4 py-3">
+		<button
+			type="button"
+			aria-label="Back"
+			class="-ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white"
+		>
+			{@html chevronLeftIcon}
+		</button>
+		<div class="flex min-w-0 flex-col gap-0.5">
+			<span class="text-sm font-semibold">Chat Support</span>
+			<span class="flex items-center gap-1.5 text-xs text-zinc-400">
+				<span class="size-2 shrink-0 rounded-full bg-green-500"></span>
 				Online — typically replies in a few minutes
 			</span>
 		</div>
 	</header>
-	<div class="messages"></div>
-	<footer>
-		<input type="text" placeholder="Message" />
-		<button type="button" class="send" aria-label="Send">{@html sendIcon}</button>
+	<div class="flex-1"></div>
+	<footer class="flex items-center gap-2 p-3">
+		<input
+			type="text"
+			placeholder="Message"
+			class="h-11 min-w-0 flex-1 rounded-full bg-zinc-800 px-4.5 text-sm text-white outline-none"
+		/>
+		<button
+			type="button"
+			aria-label="Send"
+			class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black [&_svg]:size-4.5"
+		>
+			{@html sendIcon}
+		</button>
 	</footer>
 </div>
-
-<style>
-	.panel {
-		display: flex;
-		flex-direction: column;
-		height: 420px;
-		font-family: system-ui, sans-serif;
-	}
-	header {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 12px 16px;
-		border-bottom: 1px solid #2c2c2e;
-	}
-	.back {
-		width: 32px;
-		height: 32px;
-		flex-shrink: 0;
-		margin-left: -8px;
-		border: none;
-		border-radius: 50%;
-		background: transparent;
-		color: #ffffff;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-	}
-	.heading {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-	.title {
-		font-size: 14px;
-		font-weight: 600;
-	}
-	.status {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 12px;
-		color: #8e8e93;
-	}
-	.dot {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: #30d158;
-		flex-shrink: 0;
-	}
-	.messages {
-		flex: 1;
-	}
-	footer {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px;
-	}
-	input {
-		flex: 1;
-		min-width: 0;
-		height: 44px;
-		box-sizing: border-box;
-		padding: 0 18px;
-		border: none;
-		border-radius: 9999px;
-		background: #2c2c2e;
-		color: #ffffff;
-		font-size: 14px;
-		outline: none;
-	}
-	.send {
-		width: 44px;
-		height: 44px;
-		flex-shrink: 0;
-		border: none;
-		border-radius: 50%;
-		background: #ffffff;
-		color: #000000;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-	}
-	.send :global(svg) {
-		width: 18px;
-		height: 18px;
-	}
-</style>

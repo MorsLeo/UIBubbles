@@ -1,6 +1,7 @@
 import ChatPanel from "$playground/components/chat-panel.svelte";
 import { createBubbles } from "$src/index";
 import { mount } from "svelte";
+import "$playground/app.css";
 
 const manager = createBubbles();
 
