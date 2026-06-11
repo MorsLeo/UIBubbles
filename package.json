@@ -18,7 +18,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"dev": "vite",
-		"build": "tsc && tsc-alias",
+		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"format": "prettier --write ."
@@ -33,7 +33,10 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/node": "^25.9.3",
 		"prettier": "^3.8.4",
+		"svelte": "^5.56.3",
 		"tsc-alias": "^1.8.17",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.16",

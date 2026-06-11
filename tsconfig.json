@@ -5,18 +5,15 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"paths": {
-			"$src/*": ["./src/*"]
+			"$src/*": ["./src/*"],
+			"$playground/*": ["./playground/*"]
 		},
+		"types": ["vite/client", "node"],
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
 		"verbatimModuleSyntax": true,
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
-		"outDir": "dist",
-		"rootDir": "src",
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"noEmit": true
 	},
-	"include": ["src"],
-	"exclude": ["src/**/*.test.ts"]
+	"include": ["src", "playground", "vite.config.ts"]
 }
