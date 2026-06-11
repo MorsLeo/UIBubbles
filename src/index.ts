@@ -1,7 +1,10 @@
 import { createActivation } from "$src/behaviors/activate";
+import { clampTop } from "$src/behaviors/clamp";
+import { createDismissZone } from "$src/behaviors/dismiss";
 import { makeDraggable } from "$src/behaviors/drag";
+import { startFling } from "$src/behaviors/fling";
 import { watchWindowResize } from "$src/behaviors/resize";
-import { setSnappedSide, sideRestLeft } from "$src/behaviors/snap";
+import { EDGE_MARGIN } from "$src/constants";
 import { createBubbleElement } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
 import type { BubbleInstance, BubbleManager } from "$src/types";
@@ -20,6 +23,12 @@ export const createBubbles = (): BubbleManager => {
 		bubble.el.remove();
 	};
 
+	const removeById = (id: string) => {
+		const bubble = bubbles.get(id);
+		if (bubble) dispose(bubble);
+		bubbles.delete(id);
+	};
+
 	return {
 		add(options) {
 			const el = createBubbleElement();
@@ -30,27 +39,54 @@ export const createBubbles = (): BubbleManager => {
 
 			const activation = createActivation(el, panel);
 
-			makeDraggable(el, {
-				onTap: activation.toggle,
-				onDragStart: activation.onDragStart,
-				onDragEnd: activation.onDragEnd
-			});
+			// The entrance fling isn't owned by drag, so first interaction has
+			// to cancel it here — otherwise two simulations fight over position.
+			let cancelEntrance: (() => void) | undefined;
+			const clearEntrance = () => {
+				cancelEntrance?.();
+				cancelEntrance = undefined;
+			};
+
+			const dismissZone = createDismissZone();
+
+			makeDraggable(
+				el,
+				{
+					onTap: () => {
+						clearEntrance();
+						activation.toggle();
+					},
+					onDragStart: () => {
+						clearEntrance();
+						activation.onDragStart();
+					},
+					onDragEnd: activation.onDragEnd,
+					onDismiss: () => {
+						removeById(options.id);
+						options.onDismiss?.();
+					}
+				},
+				dismissZone
+			);
 
 			document.body.appendChild(el);
 
-			// Bubbles are born docked to an edge — a side-relative position is
-			// the only kind that survives window resizes and zoom changes.
-			el.style.left = `${sideRestLeft(el, "right")}px`;
-			el.style.top = `${(window.innerHeight - el.offsetHeight) / 2}px`;
-			setSnappedSide(el, "right");
+			// Born just off-screen at dock height, then flung in with zero
+			// velocity: the standard physics carry it to the right-side rest
+			// (and stamp the snapped side, so resize/zoom anchoring holds).
+			el.style.left = `${window.innerWidth + EDGE_MARGIN}px`;
+			el.style.top = `${clampTop(el, (window.innerHeight - el.offsetHeight) / 2)}px`;
+			cancelEntrance = startFling(el, { x: 0, y: 0 });
 
 			const unwatchResize = watchWindowResize(el);
 			bubbles.set(options.id, {
 				el,
 				cleanup: () => {
+					clearEntrance();
 					unwatchResize();
 					activation.interrupt();
 					panel?.destroy();
+					dismissZone.destroy();
 				}
 			});
 		},

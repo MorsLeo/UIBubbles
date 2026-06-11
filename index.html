@@ -10,9 +10,23 @@
 				min-height: 100vh;
 				background: #000;
 			}
+			#hint {
+				position: fixed;
+				inset: 0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-family: system-ui, sans-serif;
+				font-size: 15px;
+				color: #8e8e93;
+				pointer-events: none;
+				user-select: none;
+				transition: opacity 300ms ease;
+			}
 		</style>
 	</head>
 	<body>
+		<div id="hint">Click anywhere to spawn the bubble</div>
 		<script type="module" src="/playground/main.ts"></script>
 	</body>
 </html>
