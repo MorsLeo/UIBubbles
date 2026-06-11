@@ -28,6 +28,12 @@ export interface Velocity {
 	y: number;
 }
 
+/** Position + velocity of a single axis during simulation. */
+export interface AxisState {
+	position: number;
+	velocity: number;
+}
+
 export interface VelocityTracker {
 	/** Records a pointer position at a timestamp (ms). */
 	addSample(x: number, y: number, time: number): void;
