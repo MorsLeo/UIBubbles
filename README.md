@@ -113,7 +113,7 @@ Removes every bubble, panel, and listener immediately. Call when the host view u
 
 ## Theming
 
-By default the theme is `"auto"`: it follows the user's `prefers-color-scheme` and repaints live when it changes. To force a scheme, pick a preset — then override any token via `colors`:
+By default the theme is `"auto"`: it follows the user's `prefers-color-scheme` and repaints live when it changes. To force a scheme, pick a preset. Either way, `colors` overrides individual tokens on top of whichever preset is active:
 
 ```ts
 import { bubbleThemes, createBubbles } from "@hyperplexed/bubbles";
@@ -209,6 +209,7 @@ Panels are non-modal dialogs (`role="dialog"`, labelled by the bubble's `label`,
 ```sh
 bun install
 bun run dev        # playground at the Vite dev URL
+bun run check      # svelte-check over the whole repo
 bun run test       # vitest unit tests
 bun run build      # library build to dist/
 bun run build:site # playground build to dist-site/
