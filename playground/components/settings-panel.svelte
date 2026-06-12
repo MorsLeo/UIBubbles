@@ -4,6 +4,8 @@
 	import CheckIcon from "$playground/components/icons/check-icon.svelte";
 	import CopyIcon from "$playground/components/icons/copy-icon.svelte";
 	import GearIcon from "$playground/components/icons/gear-icon.svelte";
+	import MinusIcon from "$playground/components/icons/minus-icon.svelte";
+	import PlusIcon from "$playground/components/icons/plus-icon.svelte";
 	import { config } from "$playground/config.svelte";
 	import { AUTO_PANEL_MAX_HEIGHT, defaults, ranges } from "$playground/defaults";
 	import { configSnippet } from "$playground/snippet";
@@ -180,9 +182,9 @@
 					aria-label="Fewer bubbles"
 					disabled={config.maxBubbles <= ranges.maxBubbles.min}
 					onclick={() => (config.maxBubbles -= 1)}
-					class="focus-ring flex size-6 cursor-pointer items-center justify-center rounded-md border border-zinc-700 text-xs disabled:cursor-not-allowed disabled:opacity-40 light:border-zinc-300"
+					class="focus-ring flex size-6 cursor-pointer items-center justify-center rounded-md border border-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 light:border-zinc-300"
 				>
-					−
+					<MinusIcon size={12} />
 				</button>
 				<span class="w-4 text-center text-xs">{config.maxBubbles}</span>
 				<button
@@ -190,9 +192,9 @@
 					aria-label="More bubbles"
 					disabled={config.maxBubbles >= ranges.maxBubbles.max}
 					onclick={() => (config.maxBubbles += 1)}
-					class="focus-ring flex size-6 cursor-pointer items-center justify-center rounded-md border border-zinc-700 text-xs disabled:cursor-not-allowed disabled:opacity-40 light:border-zinc-300"
+					class="focus-ring flex size-6 cursor-pointer items-center justify-center rounded-md border border-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 light:border-zinc-300"
 				>
-					+
+					<PlusIcon size={12} />
 				</button>
 			</div>
 		</div>
