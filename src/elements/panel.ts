@@ -177,9 +177,14 @@ export const createPanel = (
 			return;
 		}
 
+		// A hide can land while the show fade is still young — retiring an
+		// active bubble hands its neighbor's panel in, and a same-tick
+		// reclaim flips it right back out. Departing from the painted state
+		// keeps a barely-shown panel from snapping fully visible to fade.
+		const { opacity, scale } = getComputedStyle(el);
 		hideAnimation = el.animate(
 			[
-				{ opacity: 1, scale: "1" },
+				{ opacity, scale: scale === "none" ? "1" : scale },
 				{ opacity: 0, scale: "0.97" }
 			],
 			{ duration: HIDE_MS, easing: "ease-in" }
