@@ -8,7 +8,7 @@
    the page/panel background per theme. */
 @layer components {
 	.focus-ring {
-		@apply outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black light:focus-visible:ring-zinc-400 light:focus-visible:ring-offset-white;
+		@apply light:focus-visible:ring-zinc-400 light:focus-visible:ring-offset-white outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black;
 	}
 
 	/* Panel scroll regions: a thin neutral scrollbar, and the region ends

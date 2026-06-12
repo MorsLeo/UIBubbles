@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { marked } from "marked";
 	import DocsIcon from "$playground/components/icons/docs-icon.svelte";
+	import { marked } from "marked";
 	import readme from "../../README.md?raw";
 
 	// The panel renders the actual README — one source of truth. Relative
@@ -22,9 +22,7 @@
 		</div>
 		<div class="flex min-w-0 flex-col">
 			<span class="truncate text-sm font-semibold">Docs</span>
-			<span class="truncate text-xs text-zinc-400 light:text-zinc-600">
-				The README
-			</span>
+			<span class="truncate text-xs text-zinc-400 light:text-zinc-600"> The README </span>
 		</div>
 	</header>
 	<div class="docs-content panel-scroll mb-4 min-h-0 flex-1 overflow-y-auto p-4 pb-0 text-sm">

@@ -232,6 +232,5 @@
 					>{snippet}</code
 				></pre>
 		</div>
-
 	</div>
 </div>

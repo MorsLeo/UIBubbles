@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { untrack } from "svelte";
-	import BubbleGlyph from "$playground/components/bubble-glyph.svelte";
 	import { cards } from "$playground/cards";
+	import BubbleGlyph from "$playground/components/bubble-glyph.svelte";
 	import Cards from "$playground/components/cards.svelte";
 	import NavBar from "$playground/components/nav-bar.svelte";
 	import { config } from "$playground/config.svelte";
@@ -9,9 +8,10 @@
 	import { mountInto } from "$playground/mount";
 	import { effectiveTheme, toBubblesOptions } from "$playground/options";
 	import { configSnippet } from "$playground/snippet";
+	import type { Card } from "$playground/types";
 	import { writeConfig } from "$playground/url";
 	import { createBubbles } from "$src/index";
-	import type { Card } from "$playground/types";
+	import { untrack } from "svelte";
 
 	// The demo boots expanded up top — but only the boot. The recurring
 	// configure() below omits initialState, so a flock re-toggled after
@@ -173,8 +173,8 @@
 		<header class="flex flex-col items-center gap-3 text-center">
 			<h1 class="text-3xl font-semibold tracking-tight text-white light:text-zinc-900">bubbles</h1>
 			<p class="max-w-md text-sm text-zinc-400 light:text-zinc-600">
-				Android-style app bubbles for any website. Drag them, fling them, stack them — then open
-				the settings bubble to make them yours.
+				Android-style app bubbles for any website. Drag them, fling them, stack them — then open the
+				settings bubble to make them yours.
 			</p>
 		</header>
 
