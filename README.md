@@ -2,6 +2,8 @@
 
 Android-style app bubbles for the web. Floating, draggable bubbles that snap to screen edges, stack into a group, expand into content panels, and fling to dismiss — an overlay for any website.
 
+![Bubbles being dragged across the screen, flung to an edge, expanded into panels, and dismissed](https://raw.githubusercontent.com/githyperplexed/bubbles/main/.github/demo.gif)
+
 - **Zero dependencies, framework-agnostic** — plain TypeScript over the DOM; works with anything, ships nothing else
 - **Real physics** — spring glides, momentum flings, chained trail drags, a magnetic dismiss target
 - **Fully keyboard accessible** — single tab stop, arrow-key navigation, ARIA semantics throughout
