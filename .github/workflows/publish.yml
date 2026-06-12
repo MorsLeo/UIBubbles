@@ -1,15 +1,15 @@
 name: Publish
 
 # Publishing is a deliberate act: it fires only when a GitHub Release is
-# published (create a v* tag + release on launch day). Requires an npm
-# granular access token with publish rights saved as the NPM_TOKEN secret.
+# published (create a v* tag + release). Auth is npm Trusted Publishing —
+# npm verifies this repo + workflow over OIDC, so no token exists to leak.
 on:
   release:
     types: [published]
 
 permissions:
   contents: read
-  # Required for npm --provenance attestation.
+  # Required for the OIDC exchange and npm provenance attestation.
   id-token: write
 
 jobs:
@@ -18,14 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
-      # setup-node writes the .npmrc that npm publish authenticates with.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1+; the node-bundled npm can lag.
+      - run: npm install -g npm@latest
       - run: bun install --frozen-lockfile
       - run: bun run test
       - run: bun run build
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
