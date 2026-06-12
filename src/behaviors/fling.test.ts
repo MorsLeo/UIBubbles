@@ -1,5 +1,5 @@
 import { startFling } from "$src/behaviors/fling";
-import { REST_DISTANCE } from "$src/physics/config";
+import { REST_DISTANCE, RESTITUTION } from "$src/physics/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SIZE = 56;
@@ -68,7 +68,7 @@ describe("startFling", () => {
 		const bubble = fakeBubble(472, 400);
 		const onRest = vi.fn();
 
-		startFling(bubble.el, { x: 1500, y: 0 }, onRest);
+		startFling(bubble.el, { x: 1500, y: 0 }, RESTITUTION, onRest);
 		settle();
 
 		// 1000 viewport - 56 bubble - 12 gap.
@@ -80,7 +80,7 @@ describe("startFling", () => {
 	it("lands a leftward throw on the left wall", () => {
 		const bubble = fakeBubble(472, 400);
 
-		startFling(bubble.el, { x: -1500, y: 0 }, vi.fn());
+		startFling(bubble.el, { x: -1500, y: 0 }, RESTITUTION, vi.fn());
 		settle();
 
 		expect(bubble.left()).toBe(12);
@@ -92,7 +92,7 @@ describe("startFling", () => {
 		// crosses the midline, so the bubble must travel to the left wall.
 		const bubble = fakeBubble(600, 400);
 
-		startFling(bubble.el, { x: -2000, y: 0 }, vi.fn());
+		startFling(bubble.el, { x: -2000, y: 0 }, RESTITUTION, vi.fn());
 		settle();
 
 		expect(bubble.left()).toBe(12);
@@ -102,7 +102,7 @@ describe("startFling", () => {
 	it("springs a bubble released above the screen back to the top gap", () => {
 		const bubble = fakeBubble(932, -120);
 
-		startFling(bubble.el, { x: 0, y: 0 }, vi.fn());
+		startFling(bubble.el, { x: 0, y: 0 }, RESTITUTION, vi.fn());
 		settle();
 
 		// Only the horizontal axis hard-snaps at rest; the vertical return
@@ -114,7 +114,7 @@ describe("startFling", () => {
 	it("keeps a hard vertical throw inside the vertical gaps", () => {
 		const bubble = fakeBubble(472, 400);
 
-		startFling(bubble.el, { x: 800, y: 4000 }, vi.fn());
+		startFling(bubble.el, { x: 800, y: 4000 }, RESTITUTION, vi.fn());
 		settle();
 
 		// Ricochets decay, so the exact rest height varies — the contract
@@ -127,7 +127,7 @@ describe("startFling", () => {
 		const bubble = fakeBubble(472, 400);
 		const onRest = vi.fn();
 
-		const cancel = startFling(bubble.el, { x: 1500, y: 0 }, onRest);
+		const cancel = startFling(bubble.el, { x: 1500, y: 0 }, RESTITUTION, onRest);
 		const first = [...callbacks.values()];
 		callbacks.clear();
 		for (const cb of first) cb(0);

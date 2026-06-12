@@ -3,13 +3,15 @@ import { startFling } from "$src/behaviors/fling";
 import { clearSnappedSide } from "$src/behaviors/snap";
 import { createVelocityTracker } from "$src/behaviors/velocity";
 import { TAP_DRAG_THRESHOLD } from "$src/constants";
-import { TOUCH_VELOCITY_BOOST } from "$src/physics/config";
+import { RESTITUTION, TOUCH_VELOCITY_BOOST } from "$src/physics/config";
 import type { DismissZone, DragHooks } from "$src/types";
 
 export const makeDraggable = (
 	el: HTMLElement,
 	hooks: DragHooks = {},
-	dismissZone?: DismissZone
+	dismissZone?: DismissZone,
+	// Read at fling time, so a reconfigured value applies to the next throw.
+	ricochet: () => number = () => RESTITUTION
 ): void => {
 	const tracker = createVelocityTracker();
 	let cancelFling: (() => void) | undefined;
@@ -115,7 +117,7 @@ export const makeDraggable = (
 					const raw = tracker.getVelocity(e.timeStamp);
 					const velocity = { x: raw.x * boost, y: raw.y * boost };
 					if (!hooks.onDragEnd?.(velocity)) {
-						cancelFling = startFling(el, velocity);
+						cancelFling = startFling(el, velocity, ricochet());
 					}
 				}
 			} else if (e.type === "pointerup") {

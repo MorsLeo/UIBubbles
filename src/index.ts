@@ -5,6 +5,7 @@ import { makeKeyInteractive } from "$src/behaviors/keyboard";
 import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
 import { resolveOptions } from "$src/options";
+import { resolveTheme, systemThemeName } from "$src/theme";
 import type {
 	BubbleGroup,
 	BubbleInstance,
@@ -38,16 +39,41 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	// one tick.
 	const retiring = new Set<string>();
 
-	const panelAppearance = () => ({
-		theme: config.theme,
-		width: config.panelWidth,
-		maxHeight: config.panelMaxHeight
+	// "auto" reads the OS preference at paint time; the scheme listener
+	// below repaints when it flips, so the overlay tracks it live.
+	const themeTokens = () =>
+		resolveTheme(config.theme === "auto" ? systemThemeName() : config.theme, config.colors);
+
+	// Per-bubble sizing overrides win over the manager's values, and
+	// being absolute they survive configure() repaints unchanged.
+	const panelAppearance = (overrides: Pick<BubbleInstance, "panelWidth" | "panelMaxHeight">) => ({
+		theme: themeTokens(),
+		width: overrides.panelWidth ?? config.panelWidth,
+		maxHeight: overrides.panelMaxHeight ?? config.panelMaxHeight
 	});
+
+	// Everything the library painted repaints in place; consumer icons
+	// and content are the consumer's to restyle. Nothing evaluates while
+	// no bubbles exist, so it's safe without a DOM.
+	const repaint = () => {
+		zone?.setTheme(themeTokens());
+		for (const bubble of bubbles.values()) {
+			setBubbleTheme(bubble.el, themeTokens());
+			bubble.panel?.setAppearance(panelAppearance(bubble));
+		}
+	};
 
 	// One dismiss target and one group coordinate every bubble; created
 	// lazily so constructing a manager touches no DOM.
 	let zone: DismissZone | undefined;
 	let group: BubbleGroup | undefined;
+
+	// Repaints an auto-themed overlay when the OS preference flips;
+	// registered only while the overlay exists.
+	let scheme: MediaQueryList | undefined;
+	const onSchemeChange = () => {
+		if (config.theme === "auto") repaint();
+	};
 
 	// An emptied-out overlay tears down completely, so the next bubble
 	// enters like the first one did — fresh dock from the current config.
@@ -57,6 +83,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		zone.destroy();
 		zone = undefined;
 		window.removeEventListener("resize", onResize);
+		scheme?.removeEventListener("change", onSchemeChange);
+		scheme = undefined;
 	};
 
 	const removeById = (id: string) => {
@@ -82,7 +110,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	const ensureGroup = (): BubbleGroup => {
 		if (group) return group;
 
-		zone = createDismissZone(config.theme);
+		zone = createDismissZone(themeTokens());
 		group = createBubbleGroup(
 			zone,
 			{
@@ -91,24 +119,34 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 					for (const id of [...bubbles.keys()]) dismissById(id);
 				}
 			},
-			{ side: config.side, vertical: config.vertical, initialState: config.initialState }
+			{
+				side: config.side,
+				vertical: config.vertical,
+				initialState: config.initialState,
+				ricochet: () => config.ricochet
+			}
 		);
 		window.addEventListener("resize", onResize);
+		scheme = window.matchMedia("(prefers-color-scheme: dark)");
+		scheme.addEventListener("change", onSchemeChange);
 		return group;
 	};
 
 	return {
 		add(options) {
-			// Re-adding a bubble whose exit is in flight reverses the exit, so
-			// rapid toggles always honor the latest direction; the original
-			// element and panel live on, only the dismiss callback refreshes.
+			// Re-adding a mounted bubble refreshes everything refreshable in
+			// place — the dismiss callback, the label, the panel sizing
+			// overrides — and reverses an exit still in flight, so rapid
+			// toggles always honor the latest direction. The element, icon,
+			// and content live on.
 			const existing = bubbles.get(options.id);
 			if (existing) {
-				if (group?.restoreMember(options.id)) {
-					retiring.delete(options.id);
-					existing.onDismiss = options.onDismiss;
-					if (options.label) existing.el.setAttribute("aria-label", options.label);
-				}
+				if (group?.restoreMember(options.id)) retiring.delete(options.id);
+				existing.onDismiss = options.onDismiss;
+				existing.panelWidth = options.panelWidth;
+				existing.panelMaxHeight = options.panelMaxHeight;
+				existing.panel?.setAppearance(panelAppearance(existing));
+				if (options.label) existing.el.setAttribute("aria-label", options.label);
 				return true;
 			}
 
@@ -117,7 +155,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 
 			// The bubble mounts before its panel so tab order flows bubble →
 			// panel content (createPanel appends to the body itself).
-			const el = createBubbleElement(config.theme, options.icon, options.label);
+			const el = createBubbleElement(themeTokens(), options.icon, options.label);
 			document.body.appendChild(el);
 
 			const panelId = `bubble-panel-${options.id}`;
@@ -125,7 +163,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				? createPanel(() => bubbleGroup.attachPoint(), el, options.content, {
 						id: panelId,
 						label: options.label,
-						appearance: panelAppearance(),
+						appearance: panelAppearance(options),
 						onEscape: () => bubbleGroup.onEscape()
 					})
 				: undefined;
@@ -140,7 +178,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 					onDragEnd: (velocity) => bubbleGroup.onDragEnd(options.id, velocity),
 					onDismiss: () => bubbleGroup.onDismiss(options.id)
 				},
-				zone
+				zone,
+				() => config.ricochet
 			);
 			makeKeyInteractive(el, {
 				onActivate: () => bubbleGroup.onTap(options.id),
@@ -154,6 +193,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			bubbles.set(options.id, {
 				el,
 				panel,
+				panelWidth: options.panelWidth,
+				panelMaxHeight: options.panelMaxHeight,
 				onDismiss: options.onDismiss
 			});
 			return true;
@@ -169,14 +210,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		},
 		configure(options) {
 			config = resolveOptions(options);
-
-			// Everything the library painted repaints in place; consumer
-			// icons and content are the consumer's to restyle.
-			zone?.setTheme(config.theme);
-			for (const bubble of bubbles.values()) {
-				setBubbleTheme(bubble.el, config.theme);
-				bubble.panel?.setAppearance(panelAppearance());
-			}
+			repaint();
 		},
 		toggle() {
 			group?.toggle();

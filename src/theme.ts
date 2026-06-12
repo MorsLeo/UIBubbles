@@ -33,6 +33,10 @@ export const bubbleThemes: Record<BubbleThemeName, BubbleTheme> = {
 
 /** A preset with per-token overrides folded in. */
 export const resolveTheme = (
-	name: BubbleThemeName = "dark",
+	name: BubbleThemeName,
 	overrides?: Partial<BubbleTheme>
 ): BubbleTheme => ({ ...bubbleThemes[name], ...overrides });
+
+/** The preset matching the browser's color-scheme preference right now. */
+export const systemThemeName = (): BubbleThemeName =>
+	window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

@@ -1,11 +1,19 @@
-import { bubbleThemes, resolveTheme } from "$src/theme";
-import { describe, expect, it } from "vitest";
+import { bubbleThemes, resolveTheme, systemThemeName } from "$src/theme";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+describe("systemThemeName", () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	it("maps the prefers-color-scheme match to a preset name", () => {
+		vi.stubGlobal("window", { matchMedia: () => ({ matches: true }) });
+		expect(systemThemeName()).toBe("dark");
+
+		vi.stubGlobal("window", { matchMedia: () => ({ matches: false }) });
+		expect(systemThemeName()).toBe("light");
+	});
+});
 
 describe("resolveTheme", () => {
-	it("defaults to the dark preset", () => {
-		expect(resolveTheme()).toEqual(bubbleThemes.dark);
-	});
-
 	it("resolves a preset by name", () => {
 		expect(resolveTheme("light")).toEqual(bubbleThemes.light);
 	});

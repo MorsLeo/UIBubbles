@@ -33,8 +33,11 @@ export interface BubbleTheme {
 
 /** Manager-wide configuration; every field is optional. */
 export interface BubblesOptions {
-	/** Preset color scheme. Default "dark". */
-	theme?: BubbleThemeName;
+	/**
+	 * Preset color scheme. "auto" (the default) follows the browser's
+	 * prefers-color-scheme, tracking changes live.
+	 */
+	theme?: BubbleThemeName | "auto";
 	/** Per-token overrides applied on top of the preset. */
 	colors?: Partial<BubbleTheme>;
 	/** Screen edge the docked stack starts on. Default "right". */
@@ -45,12 +48,18 @@ export interface BubblesOptions {
 	 * Default 0.5.
 	 */
 	vertical?: number;
-	/** Expanded panel width in px; the viewport still caps it. Default 360. */
+	/** Expanded panel width in px; the viewport still caps it. Default 480. */
 	panelWidth?: number;
 	/** Cap on the panel height in px; the viewport still caps it. */
 	panelMaxHeight?: number;
 	/** Most bubbles the manager will hold; add() returns false beyond it. Default 5. */
 	maxBubbles?: number;
+	/**
+	 * Fraction of speed a flung bubble keeps when it bounces off the
+	 * top/bottom screen gap — 0 stops dead, 1 is lossless. Clamped to
+	 * 0–1. Default 0.4.
+	 */
+	ricochet?: number;
 	/**
 	 * The state a fresh flock enters in. "open" drops every entering
 	 * bubble straight into its row slot — there is no dock-then-rise
@@ -59,14 +68,20 @@ export interface BubblesOptions {
 	initialState?: BubblesState;
 }
 
-/** BubblesOptions with every default applied and the theme flattened to tokens. */
+/**
+ * BubblesOptions with every default applied. The theme stays a choice
+ * (not tokens) because "auto" resolves against the OS preference at
+ * paint time.
+ */
 export interface ResolvedBubblesOptions {
-	theme: BubbleTheme;
+	theme: BubbleThemeName | "auto";
+	colors?: Partial<BubbleTheme>;
 	side: BubbleSide;
 	vertical: number;
 	panelWidth: number;
 	panelMaxHeight?: number;
 	maxBubbles: number;
+	ricochet: number;
 	initialState: BubblesState;
 }
 
@@ -83,6 +98,10 @@ export interface BubbleOptions {
 	icon?: HTMLElement;
 	/** Content shown in the expanded panel. */
 	content?: HTMLElement;
+	/** Overrides the manager's `panelWidth` for this bubble's panel. */
+	panelWidth?: number;
+	/** Overrides the manager's `panelMaxHeight` for this bubble's panel. */
+	panelMaxHeight?: number;
 	/** Fires after the user dismisses the bubble via the removal target. */
 	onDismiss?: () => void;
 }
@@ -101,6 +120,9 @@ export type ArrowDirection = "left" | "right" | "up" | "down";
 export interface BubbleInstance {
 	el: HTMLElement;
 	panel?: PanelController;
+	/** Per-bubble panel sizing overrides; they win over the manager's. */
+	panelWidth?: number;
+	panelMaxHeight?: number;
 	/** Consumer callback for user-initiated dismissal. */
 	onDismiss?: () => void;
 }
@@ -126,7 +148,9 @@ export interface BubbleManager {
 	/**
 	 * True when the bubble is present after the call — newly added,
 	 * already mounted, or reclaimed mid-dismissal. False only when the
-	 * manager is at maxBubbles and the request was ignored.
+	 * manager is at maxBubbles and the request was ignored. Re-adding a
+	 * mounted id refreshes `label`, `onDismiss`, and the panel sizing
+	 * overrides in place; the element, icon, and content live on.
 	 */
 	add(options: BubbleOptions): boolean;
 	remove(id: string): void;

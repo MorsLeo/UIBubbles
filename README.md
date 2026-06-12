@@ -10,7 +10,7 @@ Android-style app bubbles for the web. Floating, draggable bubbles that snap to 
 - **Real physics** — spring glides, momentum flings, chained trail drags, a magnetic dismiss target
 - **Fully keyboard accessible** — single tab stop, arrow-key navigation, ARIA semantics throughout
 - **Respects `prefers-reduced-motion`** — every animation has a calm equivalent
-- **Customizable** — dark/light themes with per-token color overrides, dock position, panel sizing
+- **Customizable** — follows the system color scheme by default, with dark/light presets, per-token color overrides, dock position, panel sizing
 
 ## Install
 
@@ -44,16 +44,17 @@ That's a working bubble: drag it anywhere and it snaps to the nearest edge, tap 
 
 Creates a manager. Touches no DOM until the first `add()`, so it's safe to construct during app setup (browser only — there is no SSR rendering to do).
 
-| Option           | Type                   | Default    | Description                                                                                                                          |
-| ---------------- | ---------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `theme`          | `"dark" \| "light"`    | `"dark"`   | Preset color scheme, named for the host page it suits. `"dark"` pairs a bright bubble with a dark panel; `"light"` inverts it.       |
-| `colors`         | `Partial<BubbleTheme>` | —          | Per-token color overrides applied on top of the preset. See [Theming](#theming).                                                     |
-| `side`           | `"left" \| "right"`    | `"right"`  | Screen edge the docked stack starts on. Users can drag it anywhere afterward; with `configure()` it applies to the next fresh entry. |
-| `vertical`       | `number`               | `0.5`      | Vertical center of the docked stack as a fraction of the viewport height (`0` top, `1` bottom), clamped to the screen margins.       |
-| `panelWidth`     | `number`               | `480`      | Expanded panel width in px. The viewport always caps it.                                                                             |
-| `panelMaxHeight` | `number`               | —          | Cap on the panel height in px. Without it the panel may use the full height under the bubble row.                                    |
-| `maxBubbles`     | `number`               | `5`        | Most bubbles the manager will hold; `add()` returns `false` beyond it.                                                               |
-| `initialState`   | `"docked" \| "open"`   | `"docked"` | The state a fresh flock enters in. `"open"` drops every bubble straight into its row slot — never docked-then-risen.                 |
+| Option           | Type                          | Default    | Description                                                                                                                                                                                                          |
+| ---------------- | ----------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`          | `"auto" \| "dark" \| "light"` | `"auto"`   | Color scheme. `"auto"` follows the user's `prefers-color-scheme` and tracks changes live. The presets are named for the host page they suit: `"dark"` pairs a bright bubble with a dark panel; `"light"` inverts it. |
+| `colors`         | `Partial<BubbleTheme>`        | —          | Per-token color overrides applied on top of the preset. See [Theming](#theming).                                                                                                                                     |
+| `side`           | `"left" \| "right"`           | `"right"`  | Screen edge the docked stack starts on. Users can drag it anywhere afterward; with `configure()` it applies to the next fresh entry.                                                                                 |
+| `vertical`       | `number`                      | `0.5`      | Vertical center of the docked stack as a fraction of the viewport height (`0` top, `1` bottom), clamped to the screen margins.                                                                                       |
+| `panelWidth`     | `number`                      | `480`      | Expanded panel width in px. The viewport always caps it.                                                                                                                                                             |
+| `panelMaxHeight` | `number`                      | —          | Cap on the panel height in px. Without it the panel may use the full height under the bubble row.                                                                                                                    |
+| `maxBubbles`     | `number`                      | `5`        | Most bubbles the manager will hold; `add()` returns `false` beyond it.                                                                                                                                               |
+| `ricochet`       | `number`                      | `0.4`      | Fraction of speed a flung bubble keeps when it bounces off the top/bottom screen gap — `0` stops dead, `1` is lossless. Clamped to `0–1`.                                                                            |
+| `initialState`   | `"docked" \| "open"`          | `"docked"` | The state a fresh flock enters in. `"open"` drops every bubble straight into its row slot — never docked-then-risen.                                                                                                 |
 
 ```ts
 const manager = createBubbles({
@@ -69,15 +70,17 @@ const manager = createBubbles({
 
 ### `manager.add(options)`
 
-Mounts a bubble. It flies in from the docked side and joins the group. Re-adding an id whose dismissal is still animating reverses the exit. Returns `true` when the bubble is present after the call (newly added, already mounted, or reclaimed mid-dismissal) and `false` only when the manager is at `maxBubbles` and the request was ignored. Bubbles still animating out after `remove()` don't count toward the cap, so an evict-then-add swap works in one tick.
+Mounts a bubble. It flies in from the docked side and joins the group. Re-adding a mounted id refreshes `label`, `onDismiss`, and the panel sizing overrides in place (the element, icon, and content live on), and reverses an exit still animating after a dismissal. Returns `true` when the bubble is present after the call (newly added, already mounted, or reclaimed mid-dismissal) and `false` only when the manager is at `maxBubbles` and the request was ignored. Bubbles still animating out after `remove()` don't count toward the cap, so an evict-then-add swap works in one tick.
 
-| Option      | Type          | Description                                                                                                                     |
-| ----------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `id`        | `string`      | Unique id for this bubble (required).                                                                                           |
-| `label`     | `string`      | Accessible name for the bubble and its panel, e.g. `"Chat support"`. Without it the bubble announces as a generic button.       |
-| `icon`      | `HTMLElement` | Content shown inside the collapsed bubble (an avatar, an SVG, anything). Defaults to a chat glyph.                              |
-| `content`   | `HTMLElement` | Content shown in the expanded panel. Without it the bubble has no panel.                                                        |
-| `onDismiss` | `() => void`  | Fires after the _user_ dismisses the bubble (drag onto the target, or Delete on the keyboard). Not fired by `manager.remove()`. |
+| Option           | Type          | Description                                                                                                                     |
+| ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | `string`      | Unique id for this bubble (required).                                                                                           |
+| `label`          | `string`      | Accessible name for the bubble and its panel, e.g. `"Chat support"`. Without it the bubble announces as a generic button.       |
+| `icon`           | `HTMLElement` | Content shown inside the collapsed bubble (an avatar, an SVG, anything). Defaults to a chat glyph.                              |
+| `content`        | `HTMLElement` | Content shown in the expanded panel. Without it the bubble has no panel.                                                        |
+| `panelWidth`     | `number`      | Overrides the manager's `panelWidth` for this bubble's panel.                                                                   |
+| `panelMaxHeight` | `number`      | Overrides the manager's `panelMaxHeight` for this bubble's panel.                                                               |
+| `onDismiss`      | `() => void`  | Fires after the _user_ dismisses the bubble (drag onto the target, or Delete on the keyboard). Not fired by `manager.remove()`. |
 
 ### `manager.remove(id)`
 
@@ -85,7 +88,7 @@ Programmatic removal — animates the bubble off-screen, then unmounts it. Does 
 
 ### `manager.configure(options)`
 
-Applies new options to the live manager — no remounting, no re-entry animations. Theme and colors repaint every bubble, panel, and the dismiss target in place; panel sizing reflows open panels; a changed `maxBubbles` governs future `add()` calls (a lower cap never evicts live bubbles). `side`, `vertical`, and `initialState` describe how a fresh flock enters, so they take effect once every bubble is gone and the next one enters (or on the next page load). Omitted options return to their defaults, same as `createBubbles`.
+Applies new options to the live manager — no remounting, no re-entry animations. Theme and colors repaint every bubble, panel, and the dismiss target in place; panel sizing reflows open panels (per-bubble `panelWidth`/`panelMaxHeight` overrides keep winning); `ricochet` governs flings from the next throw; a changed `maxBubbles` governs future `add()` calls (a lower cap never evicts live bubbles). `side`, `vertical`, and `initialState` describe how a fresh flock enters, so they take effect once every bubble is gone and the next one enters (or on the next page load). Omitted options return to their defaults, same as `createBubbles`.
 
 One boundary to know: elements _you_ supplied (`icon`, `content`) are yours — the library never restyles them, so react to your own theme state there.
 
@@ -110,7 +113,7 @@ Removes every bubble, panel, and listener immediately. Call when the host view u
 
 ## Theming
 
-Pick a preset, then override any token via `colors`:
+By default the theme is `"auto"`: it follows the user's `prefers-color-scheme` and repaints live when it changes. To force a scheme, pick a preset — then override any token via `colors`:
 
 ```ts
 import { bubbleThemes, createBubbles } from "@hyperplexed/bubbles";
@@ -216,7 +219,3 @@ The repo holds the library (`src/`) and a Svelte playground (`playground/`); onl
 ## License
 
 [MIT](LICENSE)
-
----
-
-Built by [@Hyperplexed](https://www.youtube.com/@Hyperplexed)

@@ -7,6 +7,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `theme: "auto"` — follows the user's `prefers-color-scheme` and repaints live when it changes;
+  pass `"dark"` or `"light"` to force a preset
+- Per-bubble `panelWidth` and `panelMaxHeight` overrides on `add()`, winning over the manager's
+  values and surviving `configure()` repaints
+- `ricochet` manager option — the fraction of speed a flung bubble keeps when it bounces off the
+  top/bottom screen gap (default `0.4`, clamped to `0–1`, retunable live via `configure()`)
+
+### Changed
+
+- The default theme is now `"auto"` (was `"dark"`) — pass `theme: "dark"` to keep the old default
+- Re-adding a mounted bubble now refreshes its `label`, `onDismiss`, and panel sizing overrides in
+  place (previously a no-op unless the bubble was mid-dismissal)
+
 ## [0.1.0] - 2026-06-12
 
 Initial release.

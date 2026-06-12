@@ -3,7 +3,7 @@ import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { runSimulation } from "$src/behaviors/simulate";
 import { chooseSide, setSnappedSide, sideRestLeft } from "$src/behaviors/snap";
 import { EDGE_MARGIN } from "$src/constants";
-import { MAX_EDGE_DIP, REST_DISTANCE, REST_VELOCITY, RESTITUTION } from "$src/physics/config";
+import { MAX_EDGE_DIP, REST_DISTANCE, REST_VELOCITY } from "$src/physics/config";
 import { frictionDecay, projectDistance } from "$src/physics/friction";
 import { springStep } from "$src/physics/spring";
 import type { AxisState, Velocity } from "$src/types";
@@ -16,7 +16,8 @@ import { viewportWidth } from "$src/viewport";
  * release velocity, so it always lands on an edge and arrives as hot as
  * it was thrown. Vertical: pure inertia with ricochet off the top/bottom
  * gap — which is what makes an angled throw hit the wall and slide
- * along it.
+ * along it. `restitution` is the fraction of speed surviving each
+ * bounce (0 = dead stop, 1 = lossless).
  *
  * Returns a cancel function (grabbing a bubble mid-flight). `onRest`
  * fires only on natural arrival.
@@ -24,6 +25,7 @@ import { viewportWidth } from "$src/viewport";
 export const startFling = (
 	el: HTMLElement,
 	releaseVelocity: Velocity,
+	restitution: number,
 	onRest?: () => void
 ): (() => void) => {
 	const rect = el.getBoundingClientRect();
@@ -90,8 +92,8 @@ export const startFling = (
 
 		const max = maxRestTop(el);
 		if (y.position <= EDGE_MARGIN)
-			y = { position: EDGE_MARGIN, velocity: -y.velocity * RESTITUTION };
-		else if (y.position >= max) y = { position: max, velocity: -y.velocity * RESTITUTION };
+			y = { position: EDGE_MARGIN, velocity: -y.velocity * restitution };
+		else if (y.position >= max) y = { position: max, velocity: -y.velocity * restitution };
 	};
 
 	const isAtRest = (): boolean => {

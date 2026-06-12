@@ -40,7 +40,13 @@ const DOCK_NUDGE = 80;
 export const createBubbleGroup = (
 	zone: DismissZone,
 	callbacks: GroupCallbacks,
-	config: { side: BubbleSide; vertical: number; initialState: BubblesState }
+	config: {
+		side: BubbleSide;
+		vertical: number;
+		initialState: BubblesState;
+		/** Read at each fling, so configure() retunes it live. */
+		ricochet: () => number;
+	}
 ): BubbleGroup => {
 	const members: GroupMember[] = [];
 	const motions = new Map<string, () => void>();
@@ -284,7 +290,7 @@ export const createBubbleGroup = (
 				el.style.top = `${clampTop(el, defaultCenterY() - el.offsetHeight / 2)}px`;
 				motions.set(
 					member.id,
-					startFling(el, { x: 0, y: 0 }, () => {
+					startFling(el, { x: 0, y: 0 }, config.ricochet(), () => {
 						motions.delete(member.id);
 						adoptDockFrom(member);
 					})
@@ -634,7 +640,7 @@ export const createBubbleGroup = (
 			trail.cancel(leader.id);
 			motions.set(
 				leader.id,
-				startFling(leader.el, velocity, () => {
+				startFling(leader.el, velocity, config.ricochet(), () => {
 					motions.delete(leader.id);
 					flingLeaderId = undefined;
 					adoptDockFrom(leader);
