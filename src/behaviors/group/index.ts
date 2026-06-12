@@ -4,7 +4,7 @@ import { startGlide } from "$src/behaviors/glide";
 import { createGroupFeedback } from "$src/behaviors/group/feedback";
 import { dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout";
 import { createDragTrail } from "$src/behaviors/group/trail";
-import { chooseSide, getSnappedSide } from "$src/behaviors/snap";
+import { chooseSide } from "$src/behaviors/snap";
 import { EDGE_MARGIN, Z_BUBBLE_TOP } from "$src/constants";
 import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
 import type {
@@ -276,8 +276,11 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			}
 			if (!groupDragging) settleMembers();
 
+			// The exit side comes from where the bubble actually is — its
+			// snapped-side memo can be stale, since group moves only restamp
+			// the flung leader.
 			const rect = member.el.getBoundingClientRect();
-			const exitSide = getSnappedSide(member.el) ?? chooseSide(rect.left + rect.width / 2);
+			const exitSide = chooseSide(rect.left + rect.width / 2);
 			const exitUp = mode === "open";
 			const exitTarget = (): GlideTarget => {
 				if (exitUp) {
