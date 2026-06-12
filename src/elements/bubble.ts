@@ -8,6 +8,17 @@ const HOVER_GROWTH = 4;
 /** Pixels removed from the visual diameter while pressed (~0.93x). */
 const ACTIVE_SHRINK = 4;
 
+/** Ring marking the active bubble while the row is open. It sits on the
+ * surface and the active circle shrinks to make room, so circle + gap +
+ * ring never exceed the bubble's normal footprint. */
+const OUTLINE_WIDTH = 3;
+
+/** Gap between the surface edge and the active ring. */
+const OUTLINE_GAP = 3;
+
+/** Extra diameter the ring needs — what the active circle gives up. */
+const OUTLINE_SPAN = 2 * (OUTLINE_GAP + OUTLINE_WIDTH);
+
 /**
  * The surface is rendered at hover size and scaled DOWN for the rest
  * and pressed states, so the raster is never stretched past its native
@@ -18,7 +29,11 @@ const SURFACE_SIZE = BUBBLE_SIZE + HOVER_GROWTH;
 /** Per-element visual state setters, so the group can scale members together. */
 const visualControls = new WeakMap<
 	HTMLElement,
-	{ setHovered(hovered: boolean): void; setPressed(pressed: boolean): void }
+	{
+		setHovered(hovered: boolean): void;
+		setPressed(pressed: boolean): void;
+		setActive(active: boolean): void;
+	}
 >();
 
 export const setBubbleHover = (el: HTMLElement, hovered: boolean): void => {
@@ -27,6 +42,10 @@ export const setBubbleHover = (el: HTMLElement, hovered: boolean): void => {
 
 export const setBubblePressed = (el: HTMLElement, pressed: boolean): void => {
 	visualControls.get(el)?.setPressed(pressed);
+};
+
+export const setBubbleActive = (el: HTMLElement, active: boolean): void => {
+	visualControls.get(el)?.setActive(active);
 };
 
 // Lucide "message-square" (playground/icons/chat.svg), inlined because
@@ -66,7 +85,9 @@ const createSurface = (icon?: HTMLElement): HTMLElement => {
 		alignItems: "center",
 		justifyContent: "center",
 		scale: `${BUBBLE_SIZE / SURFACE_SIZE}`,
-		transition: "scale 150ms ease",
+		outline: `${OUTLINE_WIDTH}px solid transparent`,
+		outlineOffset: `${OUTLINE_GAP}px`,
+		transition: "scale 150ms ease, outline-color 150ms ease",
 		pointerEvents: "none"
 	} satisfies Partial<CSSStyleDeclaration>);
 	surface.appendChild(icon ?? createChatIcon());
@@ -93,13 +114,18 @@ export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 
 	let hovered = false;
 	let pressed = false;
+	let active = false;
 	const syncSurfaceScale = () => {
 		const visualSize = pressed
 			? BUBBLE_SIZE - ACTIVE_SHRINK
 			: hovered
 				? BUBBLE_SIZE + HOVER_GROWTH
 				: BUBBLE_SIZE;
-		surface.style.scale = `${visualSize / SURFACE_SIZE}`;
+
+		// The active ring fits inside the normal footprint: the surface
+		// shrinks so circle + gap + ring together span visualSize.
+		const span = active ? SURFACE_SIZE + OUTLINE_SPAN : SURFACE_SIZE;
+		surface.style.scale = `${visualSize / span}`;
 	};
 
 	visualControls.set(el, {
@@ -109,6 +135,11 @@ export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 		},
 		setPressed: (next) => {
 			pressed = next;
+			syncSurfaceScale();
+		},
+		setActive: (next) => {
+			active = next;
+			surface.style.outlineColor = next ? "#ffffff" : "transparent";
 			syncSurfaceScale();
 		}
 	});

@@ -6,7 +6,7 @@ import { dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout"
 import { createDragTrail } from "$src/behaviors/group/trail";
 import { chooseSide } from "$src/behaviors/snap";
 import { EDGE_MARGIN, Z_BUBBLE_TOP } from "$src/constants";
-import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
+import { setBubbleActive, setBubbleHover, setBubblePressed } from "$src/elements/bubble";
 import { TOUCH_CHASE_RATE } from "$src/physics/config";
 import type {
 	BubbleGroup,
@@ -78,6 +78,13 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		for (const m of members) m.panel?.hide();
 	};
 
+	/** White ring on the active bubble — only while the row is open. */
+	const syncActiveRing = () => {
+		for (const m of members) {
+			setBubbleActive(m.el, mode === "open" && m.id === activeId && !retiring.has(m.id));
+		}
+	};
+
 	/** Shows the active panel once its bubble is close enough to its slot. */
 	const revealWhenNear = (member: GroupMember) => () => {
 		if (mode !== "open" || member.id !== activeId) return;
@@ -132,6 +139,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		// The stack flies apart into the row — group-wide hover ends with it.
 		feedback.setHover(false);
 		activeId ??= docked()[0]?.id;
+		syncActiveRing();
 		settleMembers();
 	};
 
@@ -139,6 +147,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		mode = "docked";
 		centerY ??= window.innerHeight / 2;
 		hideAllPanels();
+		syncActiveRing();
 
 		// The active bubble leads the stack home: the most recently used
 		// member becomes topmost. Reordering happens only here — switching
@@ -152,6 +161,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	const switchTo = (member: GroupMember) => {
 		hideAllPanels();
 		activeId = member.id;
+		syncActiveRing();
 		member.panel?.show();
 	};
 
@@ -160,6 +170,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		if (activeId !== leavingId) return;
 
 		activeId = docked().find((m) => m.id !== leavingId)?.id;
+		syncActiveRing();
 		const next = activeId ? byId(activeId) : undefined;
 		if (mode === "open" && next) next.panel?.show();
 	};
@@ -200,6 +211,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// the open row — and always becomes the active one.
 			members.unshift(member);
 			activeId = member.id;
+			syncActiveRing();
 			const el = member.el;
 			feedback.attach(el);
 
@@ -353,6 +365,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// Like a fresh add, the returning bubble is the latest interaction
 			// and takes the active panel back (revealed once it nears its slot).
 			activeId = id;
+			syncActiveRing();
 			if (mode === "open") hideAllPanels();
 			centerY ??= window.innerHeight / 2;
 
