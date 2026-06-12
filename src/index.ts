@@ -54,10 +54,9 @@ export const createBubbles = (): BubbleManager => {
 
 	return {
 		add(options) {
-			// Re-adding a bubble whose exit is still in flight reverses the
-			// exit instead of being dropped, so rapid toggles always honor
-			// the latest direction. The original element and panel live on;
-			// only the dismiss callback refreshes.
+			// Re-adding a bubble whose exit is in flight reverses the exit, so
+			// rapid toggles always honor the latest direction; the original
+			// element and panel live on, only the dismiss callback refreshes.
 			const existing = bubbles.get(options.id);
 			if (existing) {
 				if (group?.restoreMember(options.id)) existing.onDismiss = options.onDismiss;

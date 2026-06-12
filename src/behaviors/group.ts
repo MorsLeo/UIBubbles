@@ -137,19 +137,14 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		const whenDocked = (apply: () => void) => () => {
 			if (mode === "docked") apply();
 		};
-		el.addEventListener(
-			"pointerenter",
-			whenDocked(() => setGroupHover(true))
-		);
-		el.addEventListener(
-			"pointerleave",
-			whenDocked(() => setGroupHover(false))
-		);
-		el.addEventListener(
-			"pointerdown",
-			whenDocked(() => setGroupPressed(true))
-		);
+		const hoverOn = whenDocked(() => setGroupHover(true));
+		const hoverOff = whenDocked(() => setGroupHover(false));
+		const press = whenDocked(() => setGroupPressed(true));
 		const release = whenDocked(() => setGroupPressed(false));
+
+		el.addEventListener("pointerenter", hoverOn);
+		el.addEventListener("pointerleave", hoverOff);
+		el.addEventListener("pointerdown", press);
 		el.addEventListener("pointerup", release);
 		el.addEventListener("pointercancel", release);
 	};
