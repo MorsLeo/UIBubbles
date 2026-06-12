@@ -278,6 +278,11 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	};
 
 	const startChase = (member: GroupMember, target: () => GlideTarget) => {
+		// The member may still be chasing from a previous drag (trails keep
+		// chasing through the release fling); cancel it, or the replaced
+		// simulation runs forever with no handle left to stop it.
+		cancelChase(member.id);
+
 		const rect = member.el.getBoundingClientRect();
 		let x: AxisState = { position: rect.left, velocity: 0 };
 		let y: AxisState = { position: rect.top, velocity: 0 };
