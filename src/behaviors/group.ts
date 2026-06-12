@@ -4,6 +4,7 @@ import { startGlide } from "$src/behaviors/glide";
 import { runSimulation } from "$src/behaviors/simulate";
 import { chooseSide, getSnappedSide, sideRestLeft } from "$src/behaviors/snap";
 import { EDGE_MARGIN, ROW_GAP, STACK_OFFSET, Z_BUBBLE_TOP } from "$src/constants";
+import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
 import { springStep } from "$src/physics/spring";
 import type {
 	AxisState,
@@ -40,6 +41,10 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	let activeId: string | undefined;
 	let groupDragging = false;
 	let rowDraggingId: string | undefined;
+
+	// Live pointer position during a group drag — the leader's chase target.
+	let grabX = 0;
+	let grabY = 0;
 
 	const byId = (id: string) => members.find((m) => m.id === id);
 
@@ -117,6 +122,37 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		for (const m of members) m.panel?.hide();
 	};
 
+	// Docked, the stack reads as one control: hovering or pressing any
+	// member scales every member together.
+	const setGroupHover = (hovered: boolean) => {
+		for (const m of members) setBubbleHover(m.el, hovered);
+	};
+
+	const setGroupPressed = (pressed: boolean) => {
+		for (const m of members) setBubblePressed(m.el, pressed);
+	};
+
+	const attachGroupFeedback = (el: HTMLElement) => {
+		const whenDocked = (apply: () => void) => () => {
+			if (mode === "docked") apply();
+		};
+		el.addEventListener(
+			"pointerenter",
+			whenDocked(() => setGroupHover(true))
+		);
+		el.addEventListener(
+			"pointerleave",
+			whenDocked(() => setGroupHover(false))
+		);
+		el.addEventListener(
+			"pointerdown",
+			whenDocked(() => setGroupPressed(true))
+		);
+		const release = whenDocked(() => setGroupPressed(false));
+		el.addEventListener("pointerup", release);
+		el.addEventListener("pointercancel", release);
+	};
+
 	/** Shows the active panel once its bubble is close enough to its slot. */
 	const revealWhenNear = (member: GroupMember) => () => {
 		if (mode !== "open" || member.id !== activeId) return;
@@ -166,6 +202,8 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 
 	const expand = () => {
 		mode = "open";
+		// The stack flies apart into the row — group-wide hover ends with it.
+		setGroupHover(false);
 		activeId ??= docked()[0]?.id;
 		settleMembers();
 	};
@@ -199,23 +237,25 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		if (mode === "open" && next) next.panel?.show();
 	};
 
+	const zoneTarget = (member: GroupMember): GlideTarget => {
+		const c = zone.center();
+		return {
+			left: c.x - member.el.offsetWidth / 2,
+			top: c.y - member.el.offsetHeight / 2
+		};
+	};
+
 	/**
 	 * Trail target during a group drag: follow your neighbor toward the
-	 * grabbed bubble (chained springs make the tail), except while the
+	 * leading bubble (chained springs make the tail), except while the
 	 * dismiss target holds the group — then everyone converges on it.
 	 */
-	const chainTarget = (member: GroupMember, grabbedId: string) => (): GlideTarget => {
-		if (zone.captured()) {
-			const c = zone.center();
-			return {
-				left: c.x - member.el.offsetWidth / 2,
-				top: c.y - member.el.offsetHeight / 2
-			};
-		}
+	const chainTarget = (member: GroupMember, leaderId: string) => (): GlideTarget => {
+		if (zone.captured()) return zoneTarget(member);
 
 		const chain = docked();
 		const i = chain.findIndex((m) => m.id === member.id);
-		const toward = i < chain.findIndex((m) => m.id === grabbedId) ? 1 : -1;
+		const toward = i < chain.findIndex((m) => m.id === leaderId) ? 1 : -1;
 		const neighbor = chain[i + toward];
 		if (!neighbor) return restingPosition(member.el);
 
@@ -223,11 +263,24 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		return { left: rect.left, top: rect.top - toward * STACK_OFFSET };
 	};
 
-	const startChase = (member: GroupMember, grabbedId: string) => {
+	/**
+	 * Leader target during a group drag: its center rides the pointer, so
+	 * grabbing the group anywhere reads as holding its topmost bubble.
+	 * While the dismiss target holds the group — and through a captured
+	 * release's exit — the leader rides the target instead.
+	 */
+	const grabTarget = (member: GroupMember) => (): GlideTarget => {
+		if (zone.captured() || zone.dismissing()) return zoneTarget(member);
+		return {
+			left: grabX - member.el.offsetWidth / 2,
+			top: grabY - member.el.offsetHeight / 2
+		};
+	};
+
+	const startChase = (member: GroupMember, target: () => GlideTarget) => {
 		const rect = member.el.getBoundingClientRect();
 		let x: AxisState = { position: rect.left, velocity: 0 };
 		let y: AxisState = { position: rect.top, velocity: 0 };
-		const target = chainTarget(member, grabbedId);
 
 		chases.set(
 			member.id,
@@ -267,6 +320,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			members.unshift(member);
 			activeId = member.id;
 			const el = member.el;
+			attachGroupFeedback(el);
 
 			// The first bubble enters with the standard fling and teaches the
 			// group its dock on landing.
@@ -336,6 +390,8 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			retiring.add(id);
 			member.panel?.hide();
 			member.el.style.pointerEvents = "none";
+			setBubbleHover(member.el, false);
+			setBubblePressed(member.el, false);
 
 			// The panel hands over immediately (never shown for a departing
 			// bubble) and the rest of the group closes the gap during the exit.
@@ -407,9 +463,9 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			switchTo(member);
 		},
 
-		onDragStart(id) {
+		onDragStart(id, x, y) {
 			const member = byId(id);
-			if (!member) return;
+			if (!member) return false;
 
 			cancelMotion(id);
 
@@ -419,22 +475,30 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				rowDraggingId = id;
 				member.el.style.zIndex = `${Z_BUBBLE_TOP}`;
 				hideAllPanels();
-				return;
+				return false;
 			}
 
-			// The grabbed bubble leads the trail visually: z falls off with
-			// chain distance. settleMembers restores stack order at rest.
+			// A docked drag is always led by the topmost bubble, whichever
+			// member was grabbed: stack order (and so z-order) never changes,
+			// and the group slides over until the leader's center is under
+			// the pointer. The group owns every position from here.
 			groupDragging = true;
-			const grabbedIndex = members.findIndex((m) => m.id === id);
-			members.forEach((m, i) => {
-				m.el.style.zIndex = `${Z_BUBBLE_TOP - Math.abs(i - grabbedIndex)}`;
-			});
+			grabX = x;
+			grabY = y;
+			syncZOrder();
 
+			const leaderId = docked()[0]?.id ?? id;
 			for (const m of members) {
 				if (retiring.has(m.id)) continue;
 				cancelMotion(m.id);
-				if (m.id !== id) startChase(m, id);
+				startChase(m, m.id === leaderId ? grabTarget(m) : chainTarget(m, leaderId));
 			}
+			return true;
+		},
+
+		onDragMove(x, y) {
+			grabX = x;
+			grabY = y;
 		},
 
 		onDragEnd(id, velocity) {
@@ -460,11 +524,16 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 
 			if (!groupDragging) return false;
 			groupDragging = false;
+
+			// The leader takes the throw; the trail keeps chasing it until
+			// it lands and teaches the group its new dock.
+			const leader = docked()[0] ?? member;
+			cancelChase(leader.id);
 			motions.set(
-				id,
-				startFling(member.el, velocity, () => {
-					motions.delete(id);
-					adoptDockFrom(member);
+				leader.id,
+				startFling(leader.el, velocity, () => {
+					motions.delete(leader.id);
+					adoptDockFrom(leader);
 					settleMembers();
 				})
 			);

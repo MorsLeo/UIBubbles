@@ -64,8 +64,14 @@ export interface GlideHooks {
 export interface DragHooks {
 	/** Press released within the tap dead zone. */
 	onTap?: () => void;
-	/** Pointer left the dead zone and a real drag began. */
-	onDragStart?: () => void;
+	/**
+	 * Pointer left the dead zone and a real drag began. Return true to take
+	 * over positioning — the drag then only reports pointer moves and keeps
+	 * the dismiss target tracking, never writing the element's position.
+	 */
+	onDragStart?: (x: number, y: number) => boolean | void;
+	/** Pointer moved during a taken-over drag. */
+	onDragMove?: (x: number, y: number) => void;
 	/** Return true to take over the release and suppress the throw. */
 	onDragEnd?: (velocity: Velocity) => boolean;
 	/** Released while captured by the dismiss target. */
@@ -100,7 +106,9 @@ export interface BubbleGroup {
 	/** Reverses an in-flight retirement; true if the member was retiring. */
 	restoreMember(id: string): boolean;
 	onTap(id: string): void;
-	onDragStart(id: string): void;
+	/** True when the group takes over the drag (docked trail drags). */
+	onDragStart(id: string, x: number, y: number): boolean;
+	onDragMove(x: number, y: number): void;
 	onDragEnd(id: string, velocity: Velocity): boolean;
 	onDismiss(id: string): void;
 	handleResize(): void;
@@ -121,6 +129,8 @@ export interface DismissZone {
 	/** Updates capture from the pointer position; true while captured. */
 	track(x: number, y: number): boolean;
 	captured(): boolean;
+	/** True from a captured release until the exit animation finishes. */
+	dismissing(): boolean;
 	/** Center of the target circle in viewport coordinates. */
 	center(): { x: number; y: number };
 	/** Animates the target back off-screen (call at release). `onHidden` fires once it's gone. */

@@ -31,6 +31,7 @@ export const makeDraggable = (
 		let lastX = event.clientX;
 		let lastY = event.clientY;
 		let dragging = false;
+		let takenOver = false;
 
 		const follower =
 			dismissZone &&
@@ -47,7 +48,7 @@ export const makeDraggable = (
 		// bubble may still be gliding under the pointer during the dead zone.
 		const beginDrag = (e: PointerEvent) => {
 			dragging = true;
-			hooks.onDragStart?.();
+			takenOver = hooks.onDragStart?.(e.clientX, e.clientY) === true;
 			clearSnappedSide(el);
 
 			const rect = el.getBoundingClientRect();
@@ -66,6 +67,14 @@ export const makeDraggable = (
 			if (!dragging) {
 				if (Math.hypot(e.clientX - startX, e.clientY - startY) < TAP_DRAG_THRESHOLD) return;
 				beginDrag(e);
+			}
+
+			// A taken-over drag owns every position; the drag just feeds it
+			// the pointer and keeps the dismiss target's capture tracking.
+			if (takenOver) {
+				dismissZone?.track(e.clientX, e.clientY);
+				hooks.onDragMove?.(e.clientX, e.clientY);
+				return;
 			}
 
 			// Capture (and the escape back from it) wins over the pointer.

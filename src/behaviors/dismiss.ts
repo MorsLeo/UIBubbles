@@ -22,6 +22,7 @@ export const createDismissZone = (): DismissZone => {
 	let cancelTransition: (() => void) | undefined;
 	let visible = false;
 	let isCaptured = false;
+	let isDismissing = false;
 	let destroyed = false;
 	let settled = false;
 	let lastX = 0;
@@ -83,6 +84,7 @@ export const createDismissZone = (): DismissZone => {
 		if (visible) return;
 		visible = true;
 		settled = false;
+		isDismissing = false;
 		setCaptured(false);
 
 		el.style.display = "flex";
@@ -104,6 +106,7 @@ export const createDismissZone = (): DismissZone => {
 
 		// A captured exit (dismissal) keeps the gripped scale on the way out.
 		if (!isCaptured) setCaptured(false);
+		isDismissing = isCaptured;
 		isCaptured = false;
 		cancelTransition?.();
 		cancelTransition = undefined;
@@ -112,6 +115,7 @@ export const createDismissZone = (): DismissZone => {
 		cancelGlide = startGlide(el, () => ({ left: restLeft(), top: offScreenTop() }), {
 			onRest: () => {
 				el.style.display = "none";
+				isDismissing = false;
 				onHidden?.();
 				if (destroyed) el.remove();
 			}
@@ -165,5 +169,13 @@ export const createDismissZone = (): DismissZone => {
 		}
 	};
 
-	return { show, track, captured: () => isCaptured, center, hide, destroy };
+	return {
+		show,
+		track,
+		captured: () => isCaptured,
+		dismissing: () => isDismissing,
+		center,
+		hide,
+		destroy
+	};
 };

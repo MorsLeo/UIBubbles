@@ -76,7 +76,8 @@ export const createBubbles = (): BubbleManager => {
 				el,
 				{
 					onTap: () => bubbleGroup.onTap(options.id),
-					onDragStart: () => bubbleGroup.onDragStart(options.id),
+					onDragStart: (x, y) => bubbleGroup.onDragStart(options.id, x, y),
+					onDragMove: (x, y) => bubbleGroup.onDragMove(x, y),
 					onDragEnd: (velocity) => bubbleGroup.onDragEnd(options.id, velocity),
 					onDismiss: () => bubbleGroup.onDismiss(options.id)
 				},

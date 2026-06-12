@@ -15,6 +15,20 @@ const ACTIVE_SHRINK = 4;
  */
 const SURFACE_SIZE = BUBBLE_SIZE + HOVER_GROWTH;
 
+/** Per-element visual state setters, so the group can scale members together. */
+const visualControls = new WeakMap<
+	HTMLElement,
+	{ setHovered(hovered: boolean): void; setPressed(pressed: boolean): void }
+>();
+
+export const setBubbleHover = (el: HTMLElement, hovered: boolean): void => {
+	visualControls.get(el)?.setHovered(hovered);
+};
+
+export const setBubblePressed = (el: HTMLElement, pressed: boolean): void => {
+	visualControls.get(el)?.setPressed(pressed);
+};
+
 // Lucide "message-square" (playground/icons/chat.svg), inlined because
 // the library builds with plain tsc — a Vite-style ?raw svg import
 // would ship an unresolvable specifier in dist.
@@ -88,26 +102,22 @@ export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 		surface.style.scale = `${visualSize / SURFACE_SIZE}`;
 	};
 
-	el.addEventListener("pointerenter", () => {
-		hovered = true;
-		syncSurfaceScale();
+	visualControls.set(el, {
+		setHovered: (next) => {
+			hovered = next;
+			syncSurfaceScale();
+		},
+		setPressed: (next) => {
+			pressed = next;
+			syncSurfaceScale();
+		}
 	});
-	el.addEventListener("pointerleave", () => {
-		hovered = false;
-		syncSurfaceScale();
-	});
-	el.addEventListener("pointerdown", () => {
-		pressed = true;
-		syncSurfaceScale();
-	});
-	el.addEventListener("pointerup", () => {
-		pressed = false;
-		syncSurfaceScale();
-	});
-	el.addEventListener("pointercancel", () => {
-		pressed = false;
-		syncSurfaceScale();
-	});
+
+	el.addEventListener("pointerenter", () => setBubbleHover(el, true));
+	el.addEventListener("pointerleave", () => setBubbleHover(el, false));
+	el.addEventListener("pointerdown", () => setBubblePressed(el, true));
+	el.addEventListener("pointerup", () => setBubblePressed(el, false));
+	el.addEventListener("pointercancel", () => setBubblePressed(el, false));
 
 	return el;
 };
