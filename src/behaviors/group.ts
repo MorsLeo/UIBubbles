@@ -40,6 +40,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	let centerY: number | undefined;
 	let activeId: string | undefined;
 	let groupDragging = false;
+	let dragLeaderId: string | undefined;
 	let rowDraggingId: string | undefined;
 
 	// Live pointer position during a group drag — the leader's chase target.
@@ -300,6 +301,16 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		);
 	};
 
+	const dragTargetFor = (member: GroupMember, leaderId: string) =>
+		member.id === leaderId ? grabTarget(member) : chainTarget(member, leaderId);
+
+	/** A member appearing mid-drag (added or restored) joins the live trail. */
+	const joinDragTrail = (member: GroupMember): boolean => {
+		if (!groupDragging || !dragLeaderId) return false;
+		startChase(member, dragTargetFor(member, dragLeaderId));
+		return true;
+	};
+
 	return {
 		// Panels position off the group, not any one bubble: below the
 		// flock's centroid. At rest the open row is page-centered, so the
@@ -358,6 +369,8 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			centerY ??= window.innerHeight / 2;
 			el.style.left = `${window.innerWidth + EDGE_MARGIN}px`;
 			el.style.top = `${dockSlotFor(member).top}px`;
+			if (joinDragTrail(member)) return;
+
 			settleMembers();
 			seedMotion(member, { x: -LAUNCH_SPEED, y: 0 });
 		},
@@ -392,6 +405,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			}
 
 			cancelMotion(id);
+			cancelChase(id);
 			retiring.add(id);
 			member.panel?.hide();
 			member.el.style.pointerEvents = "none";
@@ -401,6 +415,16 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// The panel hands over immediately (never shown for a departing
 			// bubble) and the rest of the group closes the gap during the exit.
 			handOffActivePanel(id);
+
+			// A retiring drag leader hands the pointer to the next member;
+			// the trail re-chains behind it and the drag carries on.
+			if (groupDragging && dragLeaderId === id) {
+				const next = docked()[0]?.id;
+				dragLeaderId = next;
+				if (next) {
+					for (const m of docked()) startChase(m, dragTargetFor(m, next));
+				}
+			}
 			if (!groupDragging) settleMembers();
 
 			const rect = member.el.getBoundingClientRect();
@@ -446,7 +470,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			activeId = id;
 			if (mode === "open") hideAllPanels();
 			centerY ??= window.innerHeight / 2;
-			if (!groupDragging) settleMembers();
+			if (!joinDragTrail(member) && !groupDragging) settleMembers();
 			return true;
 		},
 
@@ -493,10 +517,11 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			syncZOrder();
 
 			const leaderId = docked()[0]?.id ?? id;
+			dragLeaderId = leaderId;
 			for (const m of members) {
 				if (retiring.has(m.id)) continue;
 				cancelMotion(m.id);
-				startChase(m, m.id === leaderId ? grabTarget(m) : chainTarget(m, leaderId));
+				startChase(m, dragTargetFor(m, leaderId));
 			}
 			return true;
 		},
@@ -530,9 +555,11 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			if (!groupDragging) return false;
 			groupDragging = false;
 
-			// The leader takes the throw; the trail keeps chasing it until
+			// The leader takes the throw — resolved by id, so a member added
+			// mid-drag doesn't steal it — and the trail keeps chasing until
 			// it lands and teaches the group its new dock.
-			const leader = docked()[0] ?? member;
+			const leader = docked().find((m) => m.id === dragLeaderId) ?? docked()[0] ?? member;
+			dragLeaderId = undefined;
 			cancelChase(leader.id);
 			motions.set(
 				leader.id,
@@ -549,6 +576,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			rowDraggingId = undefined;
 			if (groupDragging) {
 				groupDragging = false;
+				dragLeaderId = undefined;
 				cancelAllChases();
 				callbacks.removeAll();
 				return;
