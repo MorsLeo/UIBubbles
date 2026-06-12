@@ -7,13 +7,16 @@
 	import { config } from "$playground/config.svelte";
 	import { defaults } from "$playground/defaults";
 	import { mountInto } from "$playground/mount";
-	import { toBubblesOptions } from "$playground/options";
+	import { effectiveTheme, toBubblesOptions } from "$playground/options";
 	import { configSnippet } from "$playground/snippet";
 	import { writeConfig } from "$playground/url";
 	import { createBubbles } from "$src/index";
 	import type { Card } from "$playground/types";
 
-	const manager = createBubbles(toBubblesOptions(config));
+	// The demo boots expanded up top — but only the boot. The recurring
+	// configure() below omits initialState, so a flock re-toggled after
+	// emptying enters docked at the side instead of covering the cards.
+	const manager = createBubbles({ ...toBubblesOptions(config), initialState: "open" });
 	let spawned = $state<Record<string, boolean>>({});
 
 	// Panel content elements by card id — the library exposes no "which
@@ -29,6 +32,11 @@
 		order = order.filter((other) => other !== id);
 	};
 
+	// The README panel runs twice as wide as the rest — prose needs the
+	// room — and rides the width slider at that multiple.
+	const panelWidthFor = (card: Card): number | undefined =>
+		card.id === "docs" ? config.panelWidth * 2 : undefined;
+
 	const spawn = (card: Card): boolean => {
 		contents[card.id] = mountInto(card.panel);
 		const added = manager.add({
@@ -36,6 +44,7 @@
 			label: card.title,
 			icon: mountInto(BubbleGlyph, { icon: card.icon }),
 			content: contents[card.id],
+			panelWidth: panelWidthFor(card),
 			onDismiss: () => drop(card.id)
 		});
 		spawned[card.id] = added;
@@ -81,6 +90,21 @@
 	// (page load, or after the flock is cleared), per the library contract.
 	$effect(() => {
 		manager.configure(toBubblesOptions(config));
+
+		// Scaled panels ride the width slider too: re-adding a mounted
+		// bubble refreshes its sizing override in place.
+		untrack(() => {
+			for (const card of cards) {
+				const width = panelWidthFor(card);
+				if (width === undefined || !spawned[card.id]) continue;
+				manager.add({
+					id: card.id,
+					label: card.title,
+					panelWidth: width,
+					onDismiss: () => drop(card.id)
+				});
+			}
+		});
 	});
 
 	// A lowered cap applies immediately. The library never evicts on
@@ -95,7 +119,9 @@
 
 	$effect(() => writeConfig(config));
 
-	const dirty = $derived(configSnippet(config) !== "createBubbles();");
+	// Compared as snippets so it stays honest if the demo defaults ever
+	// diverge from the library's.
+	const dirty = $derived(configSnippet(config) !== configSnippet(defaults));
 	const reset = () => Object.assign(config, defaults);
 
 	// The chip points at the live config, so clicking it surfaces the
@@ -113,7 +139,12 @@
 			// documented reclaim path, which also makes the bubble the latest
 			// interaction and hands it the active panel.
 			manager.remove(settings.id);
-			manager.add({ id: settings.id, label: settings.title, onDismiss: () => drop(settings.id) });
+			manager.add({
+				id: settings.id,
+				label: settings.title,
+				panelWidth: panelWidthFor(settings),
+				onDismiss: () => drop(settings.id)
+			});
 		} else {
 			while (order.length >= config.maxBubbles && evict());
 			if (!spawn(settings)) return;
@@ -123,9 +154,10 @@
 	};
 
 	// The favicon flips with the page: each variant is the mark on a
-	// rounded square in the theme's background/foreground pair.
+	// rounded square in the theme's background/foreground pair. With
+	// "auto", effectiveTheme tracks the OS preference reactively.
 	$effect(() => {
-		const light = config.theme === "light";
+		const light = effectiveTheme(config) === "light";
 		document.documentElement.classList.toggle("light", light);
 		const favicon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
 		if (favicon) favicon.href = light ? "/bubbles-light.svg" : "/bubbles-dark.svg";
@@ -134,8 +166,10 @@
 
 <NavBar />
 
-<div class="flex min-h-dvh flex-col items-center justify-center p-6 font-sans">
-	<main class="flex w-full max-w-152 flex-col items-center gap-8">
+<div class="flex min-h-dvh flex-col items-center p-6 font-sans">
+	<!-- my-auto centers the content in the leftover space while the
+	     footer keeps its in-flow spot at the bottom of the column. -->
+	<main class="my-auto flex w-full max-w-152 flex-col items-center gap-8">
 		<header class="flex flex-col items-center gap-3 text-center">
 			<h1 class="text-3xl font-semibold tracking-tight text-white light:text-zinc-900">bubbles</h1>
 			<p class="max-w-md text-sm text-zinc-400 light:text-zinc-600">
@@ -144,28 +178,18 @@
 			</p>
 		</header>
 
-		<Cards {spawned} {toggle} />
-
-		{#if dirty}
-			<div
-				class="flex items-center rounded-full border border-zinc-800 pr-3 text-xs text-zinc-400 light:border-zinc-200 light:text-zinc-600"
-			>
-				<button
-					type="button"
-					onclick={showSettings}
-					class="focus-ring flex cursor-pointer items-center gap-3 rounded-full py-1.5 pr-3 pl-4 transition-colors hover:text-zinc-200 light:hover:text-zinc-800"
-				>
-					<span class="size-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
-					Custom config
-				</button>
-				<button
-					type="button"
-					onclick={reset}
-					class="focus-ring cursor-pointer rounded-full px-1 font-semibold text-zinc-300 transition-colors hover:text-white light:text-zinc-700 light:hover:text-zinc-900"
-				>
-					Reset
-				</button>
-			</div>
-		{/if}
+		<Cards {spawned} {toggle} {dirty} {reset} {showSettings} />
 	</main>
+
+	<footer class="mt-8 text-xs text-zinc-500 light:text-zinc-600">
+		Built by
+		<a
+			href="https://www.youtube.com/@Hyperplexed"
+			target="_blank"
+			rel="noopener"
+			class="focus-ring rounded font-semibold text-zinc-300 transition-colors hover:text-white light:text-zinc-700 light:hover:text-zinc-900"
+		>
+			@Hyperplexed
+		</a>
+	</footer>
 </div>

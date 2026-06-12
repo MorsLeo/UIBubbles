@@ -2,7 +2,8 @@ import type { BubbleSide, BubbleThemeName } from "$src/index";
 import { type Component } from "svelte";
 
 export interface PlaygroundConfig {
-	theme: BubbleThemeName;
+	/** "auto" follows the visitor's OS preference, like the library default. */
+	theme: BubbleThemeName | "auto";
 	/** Accent hex without the # (URL/snippet encoding); undefined keeps the preset's surfaces. */
 	color: string | undefined;
 	side: BubbleSide;

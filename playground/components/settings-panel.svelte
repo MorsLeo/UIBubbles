@@ -40,7 +40,9 @@
 	);
 
 	const snippet = $derived(configSnippet(config));
-	const dirty = $derived(snippet !== "createBubbles();");
+	// Compared as snippets so it stays honest if the demo defaults ever
+	// diverge from the library's.
+	const dirty = $derived(snippet !== configSnippet(defaults));
 
 	const copy = async () => {
 		await navigator.clipboard.writeText(snippet);
@@ -69,27 +71,26 @@
 	</header>
 
 	<div class="panel-scroll mb-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-0">
-		<div class="grid grid-cols-2 gap-4">
-			<ControlSegmented
-				label="Theme"
-				options={[
-					{ value: "dark", label: "Dark" },
-					{ value: "light", label: "Light" }
-				]}
-				value={config.theme}
-				onSelect={(theme) => (config.theme = theme)}
-			/>
+		<ControlSegmented
+			label="Theme"
+			options={[
+				{ value: "auto", label: "Auto" },
+				{ value: "dark", label: "Dark" },
+				{ value: "light", label: "Light" }
+			]}
+			value={config.theme}
+			onSelect={(theme) => (config.theme = theme)}
+		/>
 
-			<ControlSegmented
-				label="Dock side"
-				options={[
-					{ value: "left", label: "Left" },
-					{ value: "right", label: "Right" }
-				]}
-				value={config.side}
-				onSelect={(side) => (config.side = side)}
-			/>
-		</div>
+		<ControlSegmented
+			label="Dock side"
+			options={[
+				{ value: "left", label: "Left" },
+				{ value: "right", label: "Right" }
+			]}
+			value={config.side}
+			onSelect={(side) => (config.side = side)}
+		/>
 
 		<div class="flex flex-col gap-1.5">
 			<span class="text-xs text-zinc-400 light:text-zinc-600">Accent</span>

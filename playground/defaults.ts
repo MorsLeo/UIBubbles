@@ -15,7 +15,7 @@ export const ranges = {
 
 /** Mirrors the library defaults; the URL and snippet omit matching values. */
 export const defaults: PlaygroundConfig = {
-	theme: "dark",
+	theme: "auto",
 	color: undefined,
 	side: "right",
 	vertical: 0.5,

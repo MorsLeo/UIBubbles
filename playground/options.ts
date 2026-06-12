@@ -1,6 +1,12 @@
 import { AUTO_PANEL_MAX_HEIGHT } from "$playground/defaults";
 import type { PlaygroundConfig } from "$playground/types";
-import { bubbleThemes, type BubblesOptions, type BubbleTheme } from "$src/index";
+import {
+	bubbleThemes,
+	type BubblesOptions,
+	type BubbleTheme,
+	type BubbleThemeName
+} from "$src/index";
+import { MediaQuery } from "svelte/reactivity";
 
 /**
  * Black or white, whichever reads against the accent — so white and
@@ -22,9 +28,17 @@ export const accentColors = (hex: string): Partial<BubbleTheme> => ({
 	bubbleIcon: contrastIcon(hex)
 });
 
+// The visitor's OS preference, tracked reactively so "auto" consumers
+// (page chrome, glyph ink) repaint when it flips.
+const prefersDark = new MediaQuery("(prefers-color-scheme: dark)");
+
+/** The preset actually painting right now — "auto" resolves via the OS. */
+export const effectiveTheme = (config: PlaygroundConfig): BubbleThemeName =>
+	config.theme === "auto" ? (prefersDark.current ? "dark" : "light") : config.theme;
+
 /** The glyph ink for the configured bubble surface — accent or the preset's. */
 export const glyphInk = (config: PlaygroundConfig): string =>
-	contrastIcon(config.color ?? bubbleThemes[config.theme].bubbleSurface.slice(1));
+	contrastIcon(config.color ?? bubbleThemes[effectiveTheme(config)].bubbleSurface.slice(1));
 
 export const toBubblesOptions = (config: PlaygroundConfig): BubblesOptions => ({
 	theme: config.theme,
@@ -34,8 +48,5 @@ export const toBubblesOptions = (config: PlaygroundConfig): BubblesOptions => ({
 	panelWidth: config.panelWidth,
 	panelMaxHeight:
 		config.panelMaxHeight === AUTO_PANEL_MAX_HEIGHT ? undefined : config.panelMaxHeight,
-	maxBubbles: config.maxBubbles,
-	// The demo always opens up top — presentation, not a user knob, so
-	// the snippet doesn't include it.
-	initialState: "open"
+	maxBubbles: config.maxBubbles
 });

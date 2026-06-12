@@ -1,4 +1,4 @@
-import { AUTO_PANEL_MAX_HEIGHT, defaults, ranges } from "$playground/defaults";
+import { defaults, ranges } from "$playground/defaults";
 import type { PlaygroundConfig } from "$playground/types";
 
 // Params are human-readable lowercase/kebab-case; values matching the
@@ -16,7 +16,7 @@ export const readConfig = (): Partial<PlaygroundConfig> => {
 	const config: Partial<PlaygroundConfig> = {};
 
 	const theme = params.get("theme");
-	if (theme === "dark" || theme === "light") config.theme = theme;
+	if (theme === "auto" || theme === "dark" || theme === "light") config.theme = theme;
 
 	const color = params.get("color");
 	if (color && /^[0-9a-f]{6}$/i.test(color)) config.color = color.toLowerCase();
@@ -46,7 +46,7 @@ export const writeConfig = (config: PlaygroundConfig): void => {
 	if (config.side !== defaults.side) params.set("side", config.side);
 	if (config.vertical !== defaults.vertical) params.set("vertical", `${config.vertical}`);
 	if (config.panelWidth !== defaults.panelWidth) params.set("panel-width", `${config.panelWidth}`);
-	if (config.panelMaxHeight !== AUTO_PANEL_MAX_HEIGHT) {
+	if (config.panelMaxHeight !== defaults.panelMaxHeight) {
 		params.set("panel-max-height", `${config.panelMaxHeight}`);
 	}
 	if (config.maxBubbles !== defaults.maxBubbles) params.set("max-bubbles", `${config.maxBubbles}`);

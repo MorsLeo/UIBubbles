@@ -1,4 +1,4 @@
-import { AUTO_PANEL_MAX_HEIGHT, defaults } from "$playground/defaults";
+import { defaults } from "$playground/defaults";
 import { accentColors } from "$playground/options";
 import type { PlaygroundConfig } from "$playground/types";
 
@@ -21,7 +21,7 @@ export const configSnippet = (config: PlaygroundConfig): string => {
 	if (config.panelWidth !== defaults.panelWidth) {
 		lines.push(`\tpanelWidth: ${config.panelWidth}`);
 	}
-	if (config.panelMaxHeight !== AUTO_PANEL_MAX_HEIGHT) {
+	if (config.panelMaxHeight !== defaults.panelMaxHeight) {
 		lines.push(`\tpanelMaxHeight: ${config.panelMaxHeight}`);
 	}
 	if (config.maxBubbles !== defaults.maxBubbles) lines.push(`\tmaxBubbles: ${config.maxBubbles}`);
