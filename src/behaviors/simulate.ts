@@ -1,18 +1,28 @@
-import { MAX_FRAME_DT } from "$src/physics/config";
+import { MAX_FRAME_DT, MAX_STEP_DT } from "$src/physics/config";
 
 /**
  * Drives a per-frame simulation step until it reports settling (returns
- * true). Steps receive dt in seconds, clamped so a background-tab pause
- * doesn't explode the integration. Returns a cancel function.
+ * true). Each frame integrates its real elapsed time in substeps, so
+ * low-frame-rate devices run at full speed instead of slow motion;
+ * the whole-frame cap keeps a background-tab pause from integrating as
+ * one giant leap. Steps receive dt in seconds. Returns a cancel function.
  */
 export const runSimulation = (step: (dt: number) => boolean): (() => void) => {
 	let lastTime: number | undefined;
 	let frameId = 0;
 
 	const frame = (now: number) => {
-		const dt = Math.min((now - (lastTime ?? now)) / 1000, MAX_FRAME_DT);
+		let remaining = Math.min((now - (lastTime ?? now)) / 1000, MAX_FRAME_DT);
 		lastTime = now;
-		if (!step(dt)) frameId = requestAnimationFrame(frame);
+
+		let settled = false;
+		do {
+			const dt = Math.min(remaining, MAX_STEP_DT);
+			settled = step(dt);
+			remaining -= dt;
+		} while (!settled && remaining > 1e-6);
+
+		if (!settled) frameId = requestAnimationFrame(frame);
 	};
 
 	frameId = requestAnimationFrame(frame);

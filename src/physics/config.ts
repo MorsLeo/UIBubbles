@@ -19,12 +19,19 @@ export const REST_VELOCITY = 10;
 export const REST_DISTANCE = 0.5;
 
 /**
- * Cap on a single simulation step (s). Kept near one real frame so a
- * main-thread stall (panel mounts, tab switches) never integrates as a
- * single giant step — a visible teleport. After a stall, motion just
- * resumes smoothly from where it was.
+ * Cap on a single integration step (s). Kept near one 60Hz frame so the
+ * spring math stays stable and accurate; longer real frames integrate
+ * as several steps of at most this size.
  */
-export const MAX_FRAME_DT = 0.02;
+export const MAX_STEP_DT = 0.02;
+
+/**
+ * Cap on the real time one frame may integrate (s). Devices sustaining
+ * 20fps or better run at full speed — slow frames just integrate in
+ * substeps — while a genuine stall (panel mounts, tab switches) never
+ * becomes a single giant leap: motion resumes smoothly from where it was.
+ */
+export const MAX_FRAME_DT = 0.05;
 
 /** Max distance (px) a thrown bubble may dip past the screen edge before the wall stops it. */
 export const MAX_EDGE_DIP = 20;
