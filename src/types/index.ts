@@ -1,3 +1,68 @@
+/**
+ * Preset color schemes, named for the host page they suit: "dark" pairs
+ * a bright bubble with a dark panel, "light" the inverse.
+ */
+export type BubbleThemeName = "dark" | "light";
+
+/**
+ * Every color the library paints with. Consumers usually pick a preset
+ * by name and override individual tokens via `colors`.
+ */
+export interface BubbleTheme {
+	/** Fill of the collapsed bubble circle. */
+	bubbleSurface: string;
+	/** Stroke of the built-in chat glyph (shown when a bubble has no `icon`). */
+	bubbleIcon: string;
+	/** Drop shadow under each bubble. */
+	bubbleShadow: string;
+	/** Ring marking the keyboard-focused bubble. */
+	focusRing: string;
+	/** Fill of the expanded panel and its caret. */
+	panelSurface: string;
+	/** Default text color inside the panel. */
+	panelText: string;
+	/** Drop shadow under the panel. */
+	panelShadow: string;
+	/** Fill of the drag-to-dismiss target circle. */
+	dismissSurface: string;
+	/** Border of the drag-to-dismiss target circle. */
+	dismissBorder: string;
+	/** Stroke of the X glyph inside the dismiss target. */
+	dismissIcon: string;
+}
+
+/** Manager-wide configuration; every field is optional. */
+export interface BubblesOptions {
+	/** Preset color scheme. Default "dark". */
+	theme?: BubbleThemeName;
+	/** Per-token overrides applied on top of the preset. */
+	colors?: Partial<BubbleTheme>;
+	/** Screen edge the docked stack starts on. Default "right". */
+	side?: BubbleSide;
+	/**
+	 * Vertical center of the docked stack as a fraction of the viewport
+	 * height (0 = top, 1 = bottom), clamped to the screen margins.
+	 * Default 0.5.
+	 */
+	vertical?: number;
+	/** Expanded panel width in px; the viewport still caps it. Default 360. */
+	panelWidth?: number;
+	/** Cap on the panel height in px; the viewport still caps it. */
+	panelMaxHeight?: number;
+	/** Most bubbles the manager will hold; add() ignores requests beyond it. Default 5. */
+	maxBubbles?: number;
+}
+
+/** BubblesOptions with every default applied and the theme flattened to tokens. */
+export interface ResolvedBubblesOptions {
+	theme: BubbleTheme;
+	side: BubbleSide;
+	vertical: number;
+	panelWidth: number;
+	panelMaxHeight?: number;
+	maxBubbles: number;
+}
+
 export interface BubbleOptions {
 	/** Unique id for this bubble. */
 	id: string;

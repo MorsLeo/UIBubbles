@@ -1,7 +1,7 @@
 import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { EDGE_MARGIN, Z_PANEL } from "$src/constants";
 import { BUBBLE_SIZE } from "$src/elements/bubble";
-import type { PanelController } from "$src/types";
+import type { BubbleTheme, PanelController } from "$src/types";
 
 /** Gap between the bubble and the panel below it. */
 const PANEL_GAP = 18;
@@ -13,8 +13,6 @@ const SHOW_MS = 150;
 
 /** Faster than the show: the exit rides the departing group and should read as a flick. */
 const HIDE_MS = 120;
-
-const SURFACE_COLOR = "#1c1c1e";
 
 /** Corner radius of the panel surface. */
 const SURFACE_RADIUS = 16;
@@ -41,7 +39,14 @@ export const createPanel = (
 	attachPoint: () => { x: number; bottom: number } | undefined,
 	bubble: HTMLElement,
 	content: HTMLElement,
-	options: { id: string; label?: string; onEscape: () => void }
+	options: {
+		id: string;
+		label?: string;
+		theme: BubbleTheme;
+		width: number;
+		maxHeight?: number;
+		onEscape: () => void;
+	}
 ): PanelController => {
 	const el = document.createElement("div");
 
@@ -65,8 +70,13 @@ export const createPanel = (
 		flexDirection: "column",
 		zIndex: `${Z_PANEL}`,
 		transformOrigin: "top center",
-		width: `min(360px, calc(100vw - ${EDGE_MARGIN * 2}px))`,
-		maxHeight: `calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px)`
+		// The viewport always caps the consumer's size choices: width inside
+		// the side margins, height inside the gap under a top-docked bubble.
+		width: `min(${options.width}px, calc(100vw - ${EDGE_MARGIN * 2}px))`,
+		maxHeight:
+			options.maxHeight === undefined
+				? `calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px)`
+				: `min(${options.maxHeight}px, calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px))`
 	} satisfies Partial<CSSStyleDeclaration>);
 
 	const caret = document.createElement("div");
@@ -76,7 +86,7 @@ export const createPanel = (
 		width: `${CARET_SIZE}px`,
 		height: `${CARET_SIZE}px`,
 		rotate: "45deg",
-		background: SURFACE_COLOR
+		background: options.theme.panelSurface
 	} satisfies Partial<CSSStyleDeclaration>);
 
 	// The surface owns background, clipping, and the height constraint —
@@ -89,9 +99,9 @@ export const createPanel = (
 		minHeight: "0",
 		overflow: "hidden",
 		borderRadius: `${SURFACE_RADIUS}px`,
-		background: SURFACE_COLOR,
-		color: "#ffffff",
-		boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5)"
+		background: options.theme.panelSurface,
+		color: options.theme.panelText,
+		boxShadow: options.theme.panelShadow
 	} satisfies Partial<CSSStyleDeclaration>);
 
 	surface.appendChild(content);

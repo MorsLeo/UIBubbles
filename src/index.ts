@@ -2,18 +2,33 @@ import { createDismissZone } from "$src/behaviors/dismiss";
 import { makeDraggable } from "$src/behaviors/drag";
 import { createBubbleGroup } from "$src/behaviors/group";
 import { makeKeyInteractive } from "$src/behaviors/keyboard";
-import { MAX_BUBBLES } from "$src/constants";
 import { createBubbleElement } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
-import type { BubbleGroup, BubbleInstance, BubbleManager, DismissZone } from "$src/types";
+import { resolveOptions } from "$src/options";
+import type {
+	BubbleGroup,
+	BubbleInstance,
+	BubbleManager,
+	BubblesOptions,
+	DismissZone
+} from "$src/types";
 
-export type { BubbleManager, BubbleOptions, BubbleSide } from "$src/types";
+export { bubbleThemes } from "$src/theme";
+export type {
+	BubbleManager,
+	BubbleOptions,
+	BubbleSide,
+	BubblesOptions,
+	BubbleTheme,
+	BubbleThemeName
+} from "$src/types";
 
 /**
  * Mounts the bubble overlay into the document and returns a manager
  * for adding and removing bubbles.
  */
-export const createBubbles = (): BubbleManager => {
+export const createBubbles = (options?: BubblesOptions): BubbleManager => {
+	const config = resolveOptions(options);
 	const bubbles = new Map<string, BubbleInstance>();
 
 	// One dismiss target and one group coordinate every bubble; created
@@ -42,13 +57,17 @@ export const createBubbles = (): BubbleManager => {
 	const ensureGroup = (): BubbleGroup => {
 		if (group) return group;
 
-		zone = createDismissZone();
-		group = createBubbleGroup(zone, {
-			remove: dismissById,
-			removeAll: () => {
-				for (const id of [...bubbles.keys()]) dismissById(id);
-			}
-		});
+		zone = createDismissZone(config.theme);
+		group = createBubbleGroup(
+			zone,
+			{
+				remove: dismissById,
+				removeAll: () => {
+					for (const id of [...bubbles.keys()]) dismissById(id);
+				}
+			},
+			{ side: config.side, vertical: config.vertical }
+		);
 		window.addEventListener("resize", onResize);
 		return group;
 	};
@@ -67,12 +86,12 @@ export const createBubbles = (): BubbleManager => {
 				return;
 			}
 
-			if (bubbles.size >= MAX_BUBBLES) return;
+			if (bubbles.size >= config.maxBubbles) return;
 			const bubbleGroup = ensureGroup();
 
 			// The bubble mounts before its panel so tab order flows bubble →
 			// panel content (createPanel appends to the body itself).
-			const el = createBubbleElement(options.icon, options.label);
+			const el = createBubbleElement(config.theme, options.icon, options.label);
 			document.body.appendChild(el);
 
 			const panelId = `bubble-panel-${options.id}`;
@@ -80,6 +99,9 @@ export const createBubbles = (): BubbleManager => {
 				? createPanel(() => bubbleGroup.attachPoint(), el, options.content, {
 						id: panelId,
 						label: options.label,
+						theme: config.theme,
+						width: config.panelWidth,
+						maxHeight: config.panelMaxHeight,
 						onEscape: () => bubbleGroup.onEscape()
 					})
 				: undefined;

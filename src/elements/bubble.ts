@@ -1,4 +1,5 @@
 import { Z_BUBBLE_TOP } from "$src/constants";
+import type { BubbleTheme } from "$src/types";
 
 export const BUBBLE_SIZE = 56;
 
@@ -45,13 +46,13 @@ export const setBubblePressed = (el: HTMLElement, pressed: boolean): void => {
 // Lucide "message-square" (playground/icons/chat.svg), inlined because
 // the library builds with plain tsc — a Vite-style ?raw svg import
 // would ship an unresolvable specifier in dist.
-const createChatIcon = (): SVGSVGElement => {
+const createChatIcon = (stroke: string): SVGSVGElement => {
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
 	svg.setAttribute("width", "24");
 	svg.setAttribute("height", "24");
 	svg.setAttribute("fill", "none");
-	svg.setAttribute("stroke", "#000000");
+	svg.setAttribute("stroke", stroke);
 	svg.setAttribute("stroke-width", "2");
 	svg.setAttribute("stroke-linecap", "round");
 	svg.setAttribute("stroke-linejoin", "round");
@@ -66,15 +67,15 @@ const createChatIcon = (): SVGSVGElement => {
  * blurs the rasterized layer. Shows the consumer's icon, or the default
  * chat glyph when none is given.
  */
-const createSurface = (icon?: HTMLElement): HTMLElement => {
+const createSurface = (theme: BubbleTheme, icon?: HTMLElement): HTMLElement => {
 	const surface = document.createElement("div");
 	Object.assign(surface.style, {
 		width: `${SURFACE_SIZE}px`,
 		height: `${SURFACE_SIZE}px`,
 		flexShrink: "0",
 		borderRadius: "50%",
-		background: "#ffffff",
-		boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+		background: theme.bubbleSurface,
+		boxShadow: theme.bubbleShadow,
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
@@ -84,7 +85,7 @@ const createSurface = (icon?: HTMLElement): HTMLElement => {
 		transition: "scale 150ms ease, outline-color 150ms ease",
 		pointerEvents: "none"
 	} satisfies Partial<CSSStyleDeclaration>);
-	surface.appendChild(icon ?? createChatIcon());
+	surface.appendChild(icon ?? createChatIcon(theme.bubbleIcon));
 
 	// The bubble names itself via aria-label; its visual innards (icon,
 	// ring, consumer markup) would only add noise to the tree.
@@ -92,7 +93,11 @@ const createSurface = (icon?: HTMLElement): HTMLElement => {
 	return surface;
 };
 
-export const createBubbleElement = (icon?: HTMLElement, label?: string): HTMLElement => {
+export const createBubbleElement = (
+	theme: BubbleTheme,
+	icon?: HTMLElement,
+	label?: string
+): HTMLElement => {
 	const el = document.createElement("div");
 
 	// The surface draws its own focus ring, so the native one stays off.
@@ -114,7 +119,7 @@ export const createBubbleElement = (icon?: HTMLElement, label?: string): HTMLEle
 	el.tabIndex = 0;
 	el.setAttribute("aria-label", label ?? "Bubble");
 
-	const surface = createSurface(icon);
+	const surface = createSurface(theme, icon);
 	el.appendChild(surface);
 
 	let hovered = false;
@@ -137,7 +142,7 @@ export const createBubbleElement = (icon?: HTMLElement, label?: string): HTMLEle
 	// drag layer restores that), but :focus-visible stays false there.
 	const syncFocusRing = (next: boolean) => {
 		focused = next;
-		surface.style.outlineColor = next ? "#ffffff" : "transparent";
+		surface.style.outlineColor = next ? theme.focusRing : "transparent";
 		syncSurfaceScale();
 	};
 	el.addEventListener("focus", () => syncFocusRing(el.matches(":focus-visible")));

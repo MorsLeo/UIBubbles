@@ -10,7 +10,7 @@ export const DISMISS_CAPTURE_RADIUS = 160;
 /** Pointer distance (px) within which the dismiss target leans toward the cursor — the desktop ceiling; small screens scale it down. */
 export const DISMISS_ATTRACT_RADIUS = 600;
 
-/** Most bubbles a manager will hold; add() ignores requests beyond it. */
+/** Default cap on bubbles per manager (the `maxBubbles` option overrides it). */
 export const MAX_BUBBLES = 5;
 
 /** Vertical offset (px) between bubbles stacked in the docked group. */

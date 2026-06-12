@@ -8,4 +8,9 @@ describe("createBubbles", () => {
 		expect(manager.remove).toBeTypeOf("function");
 		expect(manager.destroy).toBeTypeOf("function");
 	});
+
+	it("accepts options without touching the DOM", () => {
+		const manager = createBubbles({ theme: "light", side: "left", vertical: 0.3 });
+		expect(manager.toggle).toBeTypeOf("function");
+	});
 });

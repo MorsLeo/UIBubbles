@@ -35,12 +35,16 @@ const DOCK_NUDGE = 80;
  * tap the active bubble to collapse home. Row bubbles drag (and
  * dismiss) individually, returning to their slot on release.
  */
-export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks): BubbleGroup => {
+export const createBubbleGroup = (
+	zone: DismissZone,
+	callbacks: GroupCallbacks,
+	config: { side: BubbleSide; vertical: number }
+): BubbleGroup => {
 	const members: GroupMember[] = [];
 	const motions = new Map<string, () => void>();
 	const retiring = new Set<string>();
 	let mode: "docked" | "open" = "docked";
-	let side: BubbleSide = "right";
+	let side: BubbleSide = config.side;
 	let centerY: number | undefined;
 	let activeId: string | undefined;
 	let groupDragging = false;
@@ -49,6 +53,9 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	let rowDraggingId: string | undefined;
 
 	const byId = (id: string) => members.find((m) => m.id === id);
+
+	/** Where the dock centers until an interaction teaches it otherwise. */
+	const defaultCenterY = () => window.innerHeight * config.vertical;
 
 	// All layout math sees only the docked members: a retiring bubble stops
 	// counting the moment its exit starts, so the others redistribute
@@ -172,7 +179,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 
 	const collapse = () => {
 		mode = "docked";
-		centerY ??= window.innerHeight / 2;
+		centerY ??= defaultCenterY();
 		hideAllPanels();
 
 		// The active bubble leads the stack home: the most recently used
@@ -249,7 +256,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// group that lived on the left comes back on the left.
 			if (members.length === 1) {
 				el.style.left = `${offscreenLeft(el)}px`;
-				el.style.top = `${clampTop(el, (window.innerHeight - el.offsetHeight) / 2)}px`;
+				el.style.top = `${clampTop(el, defaultCenterY() - el.offsetHeight / 2)}px`;
 				motions.set(
 					member.id,
 					startFling(el, { x: 0, y: 0 }, () => {
@@ -273,7 +280,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 
 			// Joins the docked stack from off-screen on the group's side, at
 			// slot height; everyone redistributes around the group center.
-			centerY ??= window.innerHeight / 2;
+			centerY ??= defaultCenterY();
 			el.style.left = `${offscreenLeft(el)}px`;
 			el.style.top = `${dockSlot(member, docked(), centerY, side).top}px`;
 			if (joinTrail(member)) return;
@@ -410,7 +417,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			activeId = id;
 			syncMembers();
 			if (mode === "open") hideAllPanels();
-			centerY ??= window.innerHeight / 2;
+			centerY ??= defaultCenterY();
 
 			// A bubble that already left the screen re-enters like a fresh
 			// add — from the group's current position, not back along an
@@ -492,7 +499,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			} else {
 				// Ctrl rides the clamp to the extreme: ±Infinity resolves to
 				// the topmost/bottommost center the margins allow.
-				centerY ??= window.innerHeight / 2;
+				centerY ??= defaultCenterY();
 				const step = direction === "up" ? -DOCK_NUDGE : DOCK_NUDGE;
 				centerY = clampCenter(toEnd ? step * Infinity : centerY + step, first.el, flock.length);
 			}

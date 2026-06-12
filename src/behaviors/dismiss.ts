@@ -2,7 +2,7 @@ import { startGlide } from "$src/behaviors/glide";
 import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { DISMISS_ATTRACT_RADIUS, DISMISS_CAPTURE_RADIUS } from "$src/constants";
 import { createDismissTargetElement, DISMISS_TARGET_SIZE } from "$src/elements/dismiss-target";
-import type { DismissZone, GlideTarget } from "$src/types";
+import type { BubbleTheme, DismissZone, GlideTarget } from "$src/types";
 
 /** Gap between the resting target and the bottom of the screen. */
 const BOTTOM_MARGIN = 24;
@@ -30,8 +30,8 @@ const captureRadius = () =>
 const attractRadius = () =>
 	Math.min(DISMISS_ATTRACT_RADIUS, minViewport() * ATTRACT_RADIUS_FRACTION);
 
-export const createDismissZone = (): DismissZone => {
-	const { el, setCaptured } = createDismissTargetElement();
+export const createDismissZone = (theme: BubbleTheme): DismissZone => {
+	const { el, setCaptured } = createDismissTargetElement(theme);
 
 	let cancelGlide: (() => void) | undefined;
 	let cancelTransition: (() => void) | undefined;
