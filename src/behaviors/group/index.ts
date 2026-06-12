@@ -41,6 +41,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	let activeId: string | undefined;
 	let groupDragging = false;
 	let dragLeaderId: string | undefined;
+	let flingLeaderId: string | undefined;
 	let rowDraggingId: string | undefined;
 
 	const byId = (id: string) => members.find((m) => m.id === id);
@@ -49,6 +50,13 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	// counting the moment its exit starts, so the others redistribute
 	// while it's still flying out.
 	const docked = () => members.filter((m) => !retiring.has(m.id));
+
+	// A group movement outlives the pointer: after a release the leader
+	// flies on (the trail still chasing) until it lands and the group
+	// settles. Membership changes during either phase must cooperate
+	// with the movement instead of settling it out from under itself.
+	const flightLeaderId = () => dragLeaderId ?? flingLeaderId;
+	const groupInFlight = () => groupDragging || flingLeaderId !== undefined;
 
 	const trail = createDragTrail(zone, docked);
 	const feedback = createGroupFeedback(members, () => mode === "docked");
@@ -89,6 +97,8 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	};
 
 	const settleMembers = () => {
+		// Settling supersedes any in-flight throw.
+		flingLeaderId = undefined;
 		trail.cancelAll();
 		syncZOrder();
 		for (const m of members) {
@@ -154,10 +164,11 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		if (mode === "open" && next) next.panel?.show();
 	};
 
-	/** A member appearing mid-drag (added or restored) joins the live trail. */
-	const joinDragTrail = (member: GroupMember): boolean => {
-		if (!groupDragging || !dragLeaderId) return false;
-		trail.chase(member, dragLeaderId);
+	/** A member appearing mid-flight (added or restored) joins the live trail. */
+	const joinTrail = (member: GroupMember): boolean => {
+		const leaderId = flightLeaderId();
+		if (!groupInFlight() || !leaderId || leaderId === member.id) return false;
+		trail.chase(member, leaderId);
 		return true;
 	};
 
@@ -224,7 +235,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			centerY ??= window.innerHeight / 2;
 			el.style.left = `${offscreenLeft(el)}px`;
 			el.style.top = `${dockSlot(member, docked(), centerY, side).top}px`;
-			if (joinDragTrail(member)) return;
+			if (joinTrail(member)) return;
 
 			settleMembers();
 			seedMotion(member, { x: side === "left" ? LAUNCH_SPEED : -LAUNCH_SPEED, y: 0 });
@@ -245,11 +256,17 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			if (members.length === 0) {
 				mode = "docked";
 				activeId = undefined;
+				flingLeaderId = undefined;
 				return;
 			}
 
+			if (flingLeaderId === id) {
+				flingLeaderId = undefined;
+				const next = docked()[0];
+				if (next) adoptDockFrom(next);
+			}
 			handOffActivePanel(id);
-			if (!groupDragging) settleMembers();
+			if (!groupInFlight()) settleMembers();
 		},
 
 		retireMember(id, onGone) {
@@ -272,15 +289,21 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			handOffActivePanel(id);
 
 			// A retiring drag leader hands the pointer to the next member;
-			// the trail re-chains behind it and the drag carries on.
+			// the trail re-chains behind it and the drag carries on. A
+			// thrown leader can't hand off mid-air — the group adopts a
+			// dock where it stands and settles there instead.
 			if (groupDragging && dragLeaderId === id) {
 				const next = docked()[0]?.id;
 				dragLeaderId = next;
 				if (next) {
 					for (const m of docked()) trail.chase(m, next);
 				}
+			} else if (flingLeaderId === id) {
+				flingLeaderId = undefined;
+				const next = docked()[0];
+				if (next) adoptDockFrom(next);
 			}
-			if (!groupDragging) settleMembers();
+			if (!groupInFlight()) settleMembers();
 
 			// The exit side comes from where the bubble actually is — its
 			// snapped-side memo can be stale, since group moves only restamp
@@ -328,7 +351,38 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			activeId = id;
 			if (mode === "open") hideAllPanels();
 			centerY ??= window.innerHeight / 2;
-			if (!joinDragTrail(member) && !groupDragging) settleMembers();
+
+			// A bubble that already left the screen re-enters like a fresh
+			// add — from the group's current position, not back along an
+			// exit path the group may no longer occupy. A bubble still on
+			// screen keeps reversing smoothly from where it is.
+			const rect = member.el.getBoundingClientRect();
+			const gone =
+				rect.right <= 0 ||
+				rect.left >= window.innerWidth ||
+				rect.bottom <= 0 ||
+				rect.top >= window.innerHeight;
+			if (gone) {
+				if (mode === "open") {
+					member.el.style.left = `${rowSlot(member, docked()).left}px`;
+					member.el.style.top = `${-(member.el.offsetHeight + EDGE_MARGIN)}px`;
+				} else {
+					member.el.style.left = `${offscreenLeft(member.el)}px`;
+					member.el.style.top = `${dockSlot(member, docked(), centerY, side).top}px`;
+				}
+			}
+
+			if (!joinTrail(member) && !groupInFlight()) {
+				settleMembers();
+				if (gone) {
+					seedMotion(
+						member,
+						mode === "open"
+							? { x: 0, y: LAUNCH_SPEED }
+							: { x: side === "left" ? LAUNCH_SPEED : -LAUNCH_SPEED, y: 0 }
+					);
+				}
+			}
 			return true;
 		},
 
@@ -370,6 +424,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// and the group slides over until the leader's center is under
 			// the pointer. The group owns every position from here.
 			groupDragging = true;
+			flingLeaderId = undefined;
 			trail.setPointer(x, y);
 			trail.setRate(coarse ? TOUCH_CHASE_RATE : 1);
 			syncZOrder();
@@ -417,11 +472,13 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// it lands and teaches the group its new dock.
 			const leader = docked().find((m) => m.id === dragLeaderId) ?? docked()[0] ?? member;
 			dragLeaderId = undefined;
+			flingLeaderId = leader.id;
 			trail.cancel(leader.id);
 			motions.set(
 				leader.id,
 				startFling(leader.el, velocity, () => {
 					motions.delete(leader.id);
+					flingLeaderId = undefined;
 					adoptDockFrom(leader);
 					settleMembers();
 				})
@@ -442,7 +499,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		},
 
 		handleResize() {
-			if (groupDragging) return;
+			if (groupInFlight()) return;
 
 			for (const m of members) {
 				if (retiring.has(m.id) || m.id === rowDraggingId) continue;
