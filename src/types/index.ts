@@ -97,6 +97,8 @@ export interface BubbleGroup {
 	attachPoint(): { x: number; bottom: number } | undefined;
 	/** Animates the bubble off-screen, then calls `onGone` (programmatic removal). */
 	retireMember(id: string, onGone: () => void): void;
+	/** Reverses an in-flight retirement; true if the member was retiring. */
+	restoreMember(id: string): boolean;
 	onTap(id: string): void;
 	onDragStart(id: string): void;
 	onDragEnd(id: string, velocity: Velocity): boolean;

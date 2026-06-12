@@ -370,6 +370,25 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			);
 		},
 
+		restoreMember(id) {
+			const member = byId(id);
+			if (!member || !retiring.has(id)) return false;
+
+			// Killing the exit glide also kills its onRest, so the pending
+			// removal never lands; the bubble is simply a member again.
+			cancelMotion(id);
+			retiring.delete(id);
+			member.el.style.pointerEvents = "";
+
+			// Like a fresh add, the returning bubble is the latest interaction
+			// and takes the active panel back (revealed once it nears its slot).
+			activeId = id;
+			if (mode === "open") hideAllPanels();
+			centerY ??= window.innerHeight / 2;
+			if (!groupDragging) settleMembers();
+			return true;
+		},
+
 		onTap(id) {
 			const member = byId(id);
 			if (!member) return;

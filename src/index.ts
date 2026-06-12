@@ -54,7 +54,17 @@ export const createBubbles = (): BubbleManager => {
 
 	return {
 		add(options) {
-			if (bubbles.size >= MAX_BUBBLES || bubbles.has(options.id)) return;
+			// Re-adding a bubble whose exit is still in flight reverses the
+			// exit instead of being dropped, so rapid toggles always honor
+			// the latest direction. The original element and panel live on;
+			// only the dismiss callback refreshes.
+			const existing = bubbles.get(options.id);
+			if (existing) {
+				if (group?.restoreMember(options.id)) existing.onDismiss = options.onDismiss;
+				return;
+			}
+
+			if (bubbles.size >= MAX_BUBBLES) return;
 			const bubbleGroup = ensureGroup();
 
 			const el = createBubbleElement(options.icon);
