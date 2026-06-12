@@ -4,6 +4,8 @@ Android-style app bubbles for the web. Floating, draggable bubbles that snap to 
 
 ![Bubbles being dragged across the screen, flung to an edge, expanded into panels, and dismissed](https://raw.githubusercontent.com/githyperplexed/bubbles/main/.github/demo.gif)
 
+**[Try the live demo →](https://bubbles.hyperplexed.io)**
+
 - **Zero dependencies, framework-agnostic** — plain TypeScript over the DOM; works with anything, ships nothing else
 - **Real physics** — spring glides, momentum flings, chained trail drags, a magnetic dismiss target
 - **Fully keyboard accessible** — single tab stop, arrow-key navigation, ARIA semantics throughout
@@ -214,3 +216,7 @@ The repo holds the library (`src/`) and a Svelte playground (`playground/`); onl
 ## License
 
 [MIT](LICENSE)
+
+---
+
+Built by [@Hyperplexed](https://www.youtube.com/@Hyperplexed)

@@ -7,7 +7,7 @@
 		"type": "git",
 		"url": "git+https://github.com/githyperplexed/bubbles.git"
 	},
-	"homepage": "https://github.com/githyperplexed/bubbles#readme",
+	"homepage": "https://bubbles.hyperplexed.io",
 	"bugs": "https://github.com/githyperplexed/bubbles/issues",
 	"type": "module",
 	"main": "./dist/index.js",
