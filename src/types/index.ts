@@ -114,6 +114,24 @@ export interface BubbleGroup {
 	handleResize(): void;
 }
 
+/** Chase simulations for a docked group drag: the leader rides the pointer, the rest chain behind. */
+export interface DragTrail {
+	/** Feeds the live pointer position — the leader's target. */
+	setPointer(x: number, y: number): void;
+	/** (Re)starts a member's chase; the leader chases the pointer, others chain toward it. */
+	chase(member: GroupMember, leaderId: string): void;
+	cancel(id: string): void;
+	cancelAll(): void;
+}
+
+/** Group-wide hover/press visuals: the docked stack scales as one control. */
+export interface GroupFeedback {
+	setHover(hovered: boolean): void;
+	setPressed(pressed: boolean): void;
+	/** Wires a member element's pointer events to the group-wide state. */
+	attach(el: HTMLElement): void;
+}
+
 /** Drives the bubble while the dismiss target holds it, or while it escapes back to the pointer. */
 export interface CaptureFollower {
 	/** Feed pointer positions; true while capture/escape owns the bubble's position. */

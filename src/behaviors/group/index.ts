@@ -1,13 +1,13 @@
 import { clampTop } from "$src/behaviors/clamp";
 import { startFling } from "$src/behaviors/fling";
 import { startGlide } from "$src/behaviors/glide";
-import { runSimulation } from "$src/behaviors/simulate";
-import { chooseSide, getSnappedSide, sideRestLeft } from "$src/behaviors/snap";
-import { EDGE_MARGIN, ROW_GAP, STACK_OFFSET, Z_BUBBLE_TOP } from "$src/constants";
+import { createGroupFeedback } from "$src/behaviors/group/feedback";
+import { dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout";
+import { createDragTrail } from "$src/behaviors/group/trail";
+import { chooseSide, getSnappedSide } from "$src/behaviors/snap";
+import { EDGE_MARGIN, Z_BUBBLE_TOP } from "$src/constants";
 import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
-import { springStep } from "$src/physics/spring";
 import type {
-	AxisState,
 	BubbleGroup,
 	BubbleSide,
 	DismissZone,
@@ -33,7 +33,6 @@ const LAUNCH_SPEED = 2400;
 export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks): BubbleGroup => {
 	const members: GroupMember[] = [];
 	const motions = new Map<string, () => void>();
-	const chases = new Map<string, () => void>();
 	const retiring = new Set<string>();
 	let mode: "docked" | "open" = "docked";
 	let side: BubbleSide = "right";
@@ -43,117 +42,38 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	let dragLeaderId: string | undefined;
 	let rowDraggingId: string | undefined;
 
-	// Live pointer position during a group drag — the leader's chase target.
-	let grabX = 0;
-	let grabY = 0;
-
 	const byId = (id: string) => members.find((m) => m.id === id);
 
 	// All layout math sees only the docked members: a retiring bubble stops
 	// counting the moment its exit starts, so the others redistribute
 	// while it's still flying out.
 	const docked = () => members.filter((m) => !retiring.has(m.id));
-	const dockedIndexOf = (id: string) => docked().findIndex((m) => m.id === id);
+
+	const trail = createDragTrail(zone, docked);
+	const feedback = createGroupFeedback(members, () => mode === "docked");
 
 	const cancelMotion = (id: string) => {
 		motions.get(id)?.();
 		motions.delete(id);
 	};
 
-	const cancelChase = (id: string) => {
-		chases.get(id)?.();
-		chases.delete(id);
-	};
-
-	const cancelAllChases = () => {
-		for (const cancel of chases.values()) cancel();
-		chases.clear();
-	};
-
-	const restingPosition = (el: HTMLElement): GlideTarget => {
-		const rect = el.getBoundingClientRect();
-		return { left: rect.left, top: rect.top };
-	};
-
-	const stackHalf = () => ((docked().length - 1) * STACK_OFFSET) / 2;
-
-	/** Keeps the whole stack inside the vertical edge gaps. */
-	const clampCenter = (center: number, el: HTMLElement) => {
-		const min = EDGE_MARGIN + el.offsetHeight / 2 + stackHalf();
-		const max = window.innerHeight - EDGE_MARGIN - el.offsetHeight / 2 - stackHalf();
-		return Math.min(Math.max(center, min), max);
-	};
-
-	/** Docked slot: pure function of the group center, side, and member index. */
-	const dockSlotFor = (member: GroupMember): GlideTarget => {
-		const el = member.el;
-		const index = dockedIndexOf(member.id);
-		if (centerY === undefined || index === -1) return restingPosition(el);
-
-		const center = clampCenter(centerY, el);
-		const top = center - el.offsetHeight / 2 - stackHalf() + index * STACK_OFFSET;
-		return { left: sideRestLeft(el, side), top };
-	};
-
-	/** Row slot: the open bubbles sit centered in a row along the top gap. */
-	const rowSlotFor = (member: GroupMember): GlideTarget => {
-		const row = docked();
-		const index = row.findIndex((m) => m.id === member.id);
-		if (index === -1) return restingPosition(member.el);
-
-		const width = member.el.offsetWidth;
-		const total = row.length * width + (row.length - 1) * ROW_GAP;
-		return {
-			left: (window.innerWidth - total) / 2 + index * (width + ROW_GAP),
-			top: EDGE_MARGIN
-		};
-	};
-
 	const slotTargetFor = (member: GroupMember): GlideTarget =>
-		mode === "open" ? rowSlotFor(member) : dockSlotFor(member);
+		mode === "open" ? rowSlot(member, docked()) : dockSlot(member, docked(), centerY, side);
 
 	/** The grabbed bubble's landing teaches the group its new dock. */
 	const adoptDockFrom = (member: GroupMember) => {
-		const rect = member.el.getBoundingClientRect();
-		side = getSnappedSide(member.el) ?? chooseSide(rect.left + rect.width / 2);
-		centerY = rect.top + rect.height / 2 + stackHalf() - dockedIndexOf(member.id) * STACK_OFFSET;
+		({ side, centerY } = dockFromLanding(member, docked()));
 	};
 
 	const hideAllPanels = () => {
 		for (const m of members) m.panel?.hide();
 	};
 
-	// Docked, the stack reads as one control: hovering or pressing any
-	// member scales every member together.
-	const setGroupHover = (hovered: boolean) => {
-		for (const m of members) setBubbleHover(m.el, hovered);
-	};
-
-	const setGroupPressed = (pressed: boolean) => {
-		for (const m of members) setBubblePressed(m.el, pressed);
-	};
-
-	const attachGroupFeedback = (el: HTMLElement) => {
-		const whenDocked = (apply: () => void) => () => {
-			if (mode === "docked") apply();
-		};
-		const hoverOn = whenDocked(() => setGroupHover(true));
-		const hoverOff = whenDocked(() => setGroupHover(false));
-		const press = whenDocked(() => setGroupPressed(true));
-		const release = whenDocked(() => setGroupPressed(false));
-
-		el.addEventListener("pointerenter", hoverOn);
-		el.addEventListener("pointerleave", hoverOff);
-		el.addEventListener("pointerdown", press);
-		el.addEventListener("pointerup", release);
-		el.addEventListener("pointercancel", release);
-	};
-
 	/** Shows the active panel once its bubble is close enough to its slot. */
 	const revealWhenNear = (member: GroupMember) => () => {
 		if (mode !== "open" || member.id !== activeId) return;
 
-		const slot = rowSlotFor(member);
+		const slot = rowSlot(member, docked());
 		const rect = member.el.getBoundingClientRect();
 		if (Math.hypot(rect.left - slot.left, rect.top - slot.top) < PANEL_APPEAR_DISTANCE) {
 			member.panel?.show();
@@ -168,7 +88,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	};
 
 	const settleMembers = () => {
-		cancelAllChases();
+		trail.cancelAll();
 		syncZOrder();
 		for (const m of members) {
 			if (retiring.has(m.id) || m.id === rowDraggingId) continue;
@@ -199,7 +119,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 	const expand = () => {
 		mode = "open";
 		// The stack flies apart into the row — group-wide hover ends with it.
-		setGroupHover(false);
+		feedback.setHover(false);
 		activeId ??= docked()[0]?.id;
 		settleMembers();
 	};
@@ -233,76 +153,10 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		if (mode === "open" && next) next.panel?.show();
 	};
 
-	const zoneTarget = (member: GroupMember): GlideTarget => {
-		const c = zone.center();
-		return {
-			left: c.x - member.el.offsetWidth / 2,
-			top: c.y - member.el.offsetHeight / 2
-		};
-	};
-
-	/**
-	 * Trail target during a group drag: follow your neighbor toward the
-	 * leading bubble (chained springs make the tail), except while the
-	 * dismiss target holds the group — then everyone converges on it.
-	 */
-	const chainTarget = (member: GroupMember, leaderId: string) => (): GlideTarget => {
-		if (zone.captured()) return zoneTarget(member);
-
-		const chain = docked();
-		const i = chain.findIndex((m) => m.id === member.id);
-		const toward = i < chain.findIndex((m) => m.id === leaderId) ? 1 : -1;
-		const neighbor = chain[i + toward];
-		if (!neighbor) return restingPosition(member.el);
-
-		const rect = neighbor.el.getBoundingClientRect();
-		return { left: rect.left, top: rect.top - toward * STACK_OFFSET };
-	};
-
-	/**
-	 * Leader target during a group drag: its center rides the pointer, so
-	 * grabbing the group anywhere reads as holding its topmost bubble.
-	 * While the dismiss target holds the group — and through a captured
-	 * release's exit — the leader rides the target instead.
-	 */
-	const grabTarget = (member: GroupMember) => (): GlideTarget => {
-		if (zone.captured() || zone.dismissing()) return zoneTarget(member);
-		return {
-			left: grabX - member.el.offsetWidth / 2,
-			top: grabY - member.el.offsetHeight / 2
-		};
-	};
-
-	const startChase = (member: GroupMember, target: () => GlideTarget) => {
-		// The member may still be chasing from a previous drag (trails keep
-		// chasing through the release fling); cancel it, or the replaced
-		// simulation runs forever with no handle left to stop it.
-		cancelChase(member.id);
-
-		const rect = member.el.getBoundingClientRect();
-		let x: AxisState = { position: rect.left, velocity: 0 };
-		let y: AxisState = { position: rect.top, velocity: 0 };
-
-		chases.set(
-			member.id,
-			runSimulation((dt) => {
-				const t = target();
-				x = springStep(x, t.left, dt);
-				y = springStep(y, t.top, dt);
-				member.el.style.left = `${x.position}px`;
-				member.el.style.top = `${y.position}px`;
-				return false; // Lives until the group settles or is dismissed.
-			})
-		);
-	};
-
-	const dragTargetFor = (member: GroupMember, leaderId: string) =>
-		member.id === leaderId ? grabTarget(member) : chainTarget(member, leaderId);
-
 	/** A member appearing mid-drag (added or restored) joins the live trail. */
 	const joinDragTrail = (member: GroupMember): boolean => {
 		if (!groupDragging || !dragLeaderId) return false;
-		startChase(member, dragTargetFor(member, dragLeaderId));
+		trail.chase(member, dragLeaderId);
 		return true;
 	};
 
@@ -331,7 +185,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			members.unshift(member);
 			activeId = member.id;
 			const el = member.el;
-			attachGroupFeedback(el);
+			feedback.attach(el);
 
 			// The first bubble enters with the standard fling and teaches the
 			// group its dock on landing.
@@ -351,7 +205,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			if (mode === "open") {
 				// Falls in from off-screen top into the far-left slot and takes
 				// the active panel (revealed by its arrival); the row shifts over.
-				el.style.left = `${rowSlotFor(member).left}px`;
+				el.style.left = `${rowSlot(member, docked()).left}px`;
 				el.style.top = `${-(el.offsetHeight + EDGE_MARGIN)}px`;
 				hideAllPanels();
 				settleMembers();
@@ -363,7 +217,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// redistributes around the group center.
 			centerY ??= window.innerHeight / 2;
 			el.style.left = `${window.innerWidth + EDGE_MARGIN}px`;
-			el.style.top = `${dockSlotFor(member).top}px`;
+			el.style.top = `${dockSlot(member, docked(), centerY, side).top}px`;
 			if (joinDragTrail(member)) return;
 
 			settleMembers();
@@ -375,7 +229,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			if (!member) return;
 
 			cancelMotion(id);
-			cancelChase(id);
+			trail.cancel(id);
 			retiring.delete(id);
 			members.splice(
 				members.findIndex((m) => m.id === id),
@@ -400,7 +254,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			}
 
 			cancelMotion(id);
-			cancelChase(id);
+			trail.cancel(id);
 			retiring.add(id);
 			member.panel?.hide();
 			member.el.style.pointerEvents = "none";
@@ -417,7 +271,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				const next = docked()[0]?.id;
 				dragLeaderId = next;
 				if (next) {
-					for (const m of docked()) startChase(m, dragTargetFor(m, next));
+					for (const m of docked()) trail.chase(m, next);
 				}
 			}
 			if (!groupDragging) settleMembers();
@@ -507,8 +361,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// and the group slides over until the leader's center is under
 			// the pointer. The group owns every position from here.
 			groupDragging = true;
-			grabX = x;
-			grabY = y;
+			trail.setPointer(x, y);
 			syncZOrder();
 
 			const leaderId = docked()[0]?.id ?? id;
@@ -516,14 +369,13 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			for (const m of members) {
 				if (retiring.has(m.id)) continue;
 				cancelMotion(m.id);
-				startChase(m, dragTargetFor(m, leaderId));
+				trail.chase(m, leaderId);
 			}
 			return true;
 		},
 
 		onDragMove(x, y) {
-			grabX = x;
-			grabY = y;
+			trail.setPointer(x, y);
 		},
 
 		onDragEnd(id, velocity) {
@@ -536,7 +388,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				rowDraggingId = undefined;
 				motions.set(
 					id,
-					startGlide(member.el, () => rowSlotFor(member), {
+					startGlide(member.el, () => rowSlot(member, docked()), {
 						onRest: () => {
 							motions.delete(id);
 							const active = activeId ? byId(activeId) : undefined;
@@ -555,7 +407,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// it lands and teaches the group its new dock.
 			const leader = docked().find((m) => m.id === dragLeaderId) ?? docked()[0] ?? member;
 			dragLeaderId = undefined;
-			cancelChase(leader.id);
+			trail.cancel(leader.id);
 			motions.set(
 				leader.id,
 				startFling(leader.el, velocity, () => {
@@ -572,7 +424,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			if (groupDragging) {
 				groupDragging = false;
 				dragLeaderId = undefined;
-				cancelAllChases();
+				trail.cancelAll();
 				callbacks.removeAll();
 				return;
 			}
