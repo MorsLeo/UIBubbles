@@ -32,10 +32,12 @@
 		order = order.filter((other) => other !== id);
 	};
 
-	// The README panel runs twice as wide as the rest — prose needs the
-	// room — and rides the width slider at that multiple.
+	// The README panel gets a fixed width — prose needs the room — while
+	// the rest ride the configurable panel width.
+	const DOCS_PANEL_WIDTH = 960;
+
 	const panelWidthFor = (card: Card): number | undefined =>
-		card.id === "docs" ? config.panelWidth * 2 : undefined;
+		card.id === "docs" ? DOCS_PANEL_WIDTH : undefined;
 
 	const spawn = (card: Card): boolean => {
 		contents[card.id] = mountInto(card.panel);
@@ -90,21 +92,6 @@
 	// (page load, or after the flock is cleared), per the library contract.
 	$effect(() => {
 		manager.configure(toBubblesOptions(config));
-
-		// Scaled panels ride the width slider too: re-adding a mounted
-		// bubble refreshes its sizing override in place.
-		untrack(() => {
-			for (const card of cards) {
-				const width = panelWidthFor(card);
-				if (width === undefined || !spawned[card.id]) continue;
-				manager.add({
-					id: card.id,
-					label: card.title,
-					panelWidth: width,
-					onDismiss: () => drop(card.id)
-				});
-			}
-		});
 	});
 
 	// A lowered cap applies immediately. The library never evicts on
