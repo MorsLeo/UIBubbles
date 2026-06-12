@@ -1,4 +1,5 @@
 import { startGlide } from "$src/behaviors/glide";
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { runSimulation } from "$src/behaviors/simulate";
 import type { CaptureFollower, DismissZone, GlideTarget } from "$src/types";
 
@@ -25,6 +26,12 @@ export const createCaptureFollower = (
 		const grabbed = zone.center();
 		let gapX = rect.left + rect.width / 2 - grabbed.x;
 		let gapY = rect.top + rect.height / 2 - grabbed.y;
+
+		// Reduced motion: no catch-up animation — captured means centered.
+		if (prefersReducedMotion()) {
+			gapX = 0;
+			gapY = 0;
+		}
 
 		return runSimulation((dt) => {
 			const decay = Math.pow(0.5, dt / CAPTURE_SETTLE_HALF_LIFE);

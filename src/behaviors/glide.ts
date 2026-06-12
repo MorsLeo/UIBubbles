@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { runSimulation } from "$src/behaviors/simulate";
 import { REST_DISTANCE, REST_VELOCITY } from "$src/physics/config";
 import { springStep } from "$src/physics/spring";
@@ -13,6 +14,19 @@ export const startGlide = (
 	target: () => GlideTarget,
 	hooks: GlideHooks = {}
 ): (() => void) => {
+	// Reduced motion skips the journey but keeps the contracts: still one
+	// async tick, so cancel handles and rest bookkeeping work unchanged.
+	if (prefersReducedMotion()) {
+		return runSimulation(() => {
+			const { left, top } = target();
+			el.style.left = `${left}px`;
+			el.style.top = `${top}px`;
+			hooks.onFrame?.();
+			hooks.onRest?.();
+			return true;
+		});
+	}
+
 	const rect = el.getBoundingClientRect();
 	let x: AxisState = { position: rect.left, velocity: hooks.initialVelocity?.x ?? 0 };
 	let y: AxisState = { position: rect.top, velocity: hooks.initialVelocity?.y ?? 0 };

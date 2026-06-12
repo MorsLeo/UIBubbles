@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { EDGE_MARGIN, Z_PANEL } from "$src/constants";
 import { BUBBLE_SIZE } from "$src/elements/bubble";
 import type { PanelController } from "$src/types";
@@ -135,17 +136,31 @@ export const createPanel = (
 		el.style.display = "flex";
 		position();
 		followFrame = requestAnimationFrame(followLoop);
+
+		// Reduced motion keeps the fades (opacity is fine) but drops the zoom.
 		el.animate(
-			[
-				{ opacity: 0, scale: "0.95" },
-				{ opacity: 1, scale: "1" }
-			],
+			prefersReducedMotion()
+				? [{ opacity: 0 }, { opacity: 1 }]
+				: [
+						{ opacity: 0, scale: "0.95" },
+						{ opacity: 1, scale: "1" }
+					],
 			{ duration: SHOW_MS, easing: "ease-out" }
 		);
 	};
 
 	const hide = () => {
 		if (!isOpen() || hideAnimation) return;
+
+		// Reduced motion hides instantly: the group snaps home in one
+		// tick, and a lingering fade would outlive the collapse it
+		// belongs to. The fade-in stays — arrivals can afford the beat.
+		if (prefersReducedMotion()) {
+			el.style.display = "none";
+			cancelAnimationFrame(followFrame);
+			return;
+		}
+
 		hideAnimation = el.animate(
 			[
 				{ opacity: 1, scale: "1" },

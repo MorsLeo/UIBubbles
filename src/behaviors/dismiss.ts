@@ -1,4 +1,5 @@
 import { startGlide } from "$src/behaviors/glide";
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { DISMISS_ATTRACT_RADIUS, DISMISS_CAPTURE_RADIUS } from "$src/constants";
 import { createDismissTargetElement, DISMISS_TARGET_SIZE } from "$src/elements/dismiss-target";
 import type { DismissZone, GlideTarget } from "$src/types";
@@ -87,6 +88,7 @@ export const createDismissZone = (): DismissZone => {
 	 */
 	const transitionTo = (position: (x: number, y: number) => GlideTarget) => {
 		cancelTransition?.();
+		if (prefersReducedMotion()) return;
 		cancelTransition = startGlide(el, () => position(lastX, lastY), {
 			onRest: () => {
 				cancelTransition = undefined;
@@ -104,8 +106,21 @@ export const createDismissZone = (): DismissZone => {
 		el.style.display = "flex";
 		el.style.left = `${restLeft()}px`;
 		el.style.top = `${offScreenTop()}px`;
-
 		cancelGlide?.();
+
+		// Reduced motion: the target fades in at rest instead of riding
+		// up from off-screen.
+		if (prefersReducedMotion()) {
+			setPosition({ left: restLeft(), top: restTop() });
+			settled = true;
+			const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+				duration: 150,
+				easing: "ease-out"
+			});
+			cancelGlide = () => fade.cancel();
+			return;
+		}
+
 		cancelGlide = startGlide(el, () => ({ left: restLeft(), top: restTop() }), {
 			onRest: () => {
 				settled = true;
@@ -124,15 +139,27 @@ export const createDismissZone = (): DismissZone => {
 		isCaptured = false;
 		cancelTransition?.();
 		cancelTransition = undefined;
-
 		cancelGlide?.();
+
+		const finishHide = () => {
+			el.style.display = "none";
+			isDismissing = false;
+			onHidden?.();
+			if (destroyed) el.remove();
+		};
+
+		if (prefersReducedMotion()) {
+			const fade = el.animate([{ opacity: 1 }, { opacity: 0 }], {
+				duration: 150,
+				easing: "ease-in"
+			});
+			fade.onfinish = finishHide;
+			cancelGlide = () => fade.cancel();
+			return;
+		}
+
 		cancelGlide = startGlide(el, () => ({ left: restLeft(), top: offScreenTop() }), {
-			onRest: () => {
-				el.style.display = "none";
-				isDismissing = false;
-				onHidden?.();
-				if (destroyed) el.remove();
-			}
+			onRest: finishHide
 		});
 	};
 
@@ -141,8 +168,14 @@ export const createDismissZone = (): DismissZone => {
 		lastX = x;
 		lastY = y;
 
+		// Reduced motion pins the target at rest: the lean and the tether
+		// are it moving itself in response to the drag — decoration. The
+		// capture/escape radii are measured from rest anyway, so behavior
+		// is identical, just stationary.
+		const pinned = prefersReducedMotion();
+
 		if (isCaptured) {
-			if (settled && !cancelTransition) setPosition(tetherPosition(x, y));
+			if (settled && !cancelTransition && !pinned) setPosition(tetherPosition(x, y));
 
 			// Escape is measured from the rest point — the tethered pair moves
 			// with the cursor, so its own center can't be the boundary.
@@ -154,7 +187,7 @@ export const createDismissZone = (): DismissZone => {
 			return isCaptured;
 		}
 
-		if (settled && !cancelTransition) setPosition(pullPosition(x, y));
+		if (settled && !cancelTransition && !pinned) setPosition(pullPosition(x, y));
 
 		// Same reference frame as the escape check above — measuring capture
 		// from the (displaced) live center instead would re-capture instantly

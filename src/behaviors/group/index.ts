@@ -4,6 +4,7 @@ import { startGlide } from "$src/behaviors/glide";
 import { createGroupFeedback } from "$src/behaviors/group/feedback";
 import { clampCenter, dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout";
 import { createDragTrail } from "$src/behaviors/group/trail";
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { chooseSide } from "$src/behaviors/snap";
 import { EDGE_MARGIN, Z_BUBBLE_TOP } from "$src/constants";
 import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
@@ -79,6 +80,15 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 
 	const hideAllPanels = () => {
 		for (const m of members) m.panel?.hide();
+	};
+
+	/**
+	 * Reduced motion swaps an entrance's fly-in for a fade at the slot
+	 * (the glide still snaps the position; opacity sells the arrival).
+	 */
+	const fadeInIfReduced = (el: HTMLElement) => {
+		if (!prefersReducedMotion()) return;
+		el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: "ease-out" });
 	};
 
 	/**
@@ -232,6 +242,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			syncMembers();
 			const el = member.el;
 			feedback.attach(el);
+			fadeInIfReduced(el);
 
 			// The first bubble enters with the standard fling and teaches the
 			// group its dock on landing — from the remembered side, so a
@@ -341,6 +352,18 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			}
 			if (!groupInFlight()) settleMembers();
 
+			// Reduced motion: the exit fades in place instead of flying off.
+			// Cancelling the fade (a restore) puts opacity straight back.
+			if (prefersReducedMotion()) {
+				const fade = member.el.animate([{ opacity: 1 }, { opacity: 0 }], {
+					duration: 150,
+					easing: "ease-in"
+				});
+				fade.onfinish = onGone;
+				motions.set(id, () => fade.cancel());
+				return;
+			}
+
 			// The exit side comes from where the bubble actually is — its
 			// snapped-side memo can be stale, since group moves only restamp
 			// the flung leader.
@@ -409,6 +432,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				}
 			}
 
+			if (gone) fadeInIfReduced(member.el);
 			if (!joinTrail(member) && !groupInFlight()) {
 				settleMembers();
 				if (gone) {

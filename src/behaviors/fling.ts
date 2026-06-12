@@ -1,4 +1,5 @@
 import { clampTop, maxRestTop } from "$src/behaviors/clamp";
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { runSimulation } from "$src/behaviors/simulate";
 import { chooseSide, setSnappedSide, sideRestLeft } from "$src/behaviors/snap";
 import { EDGE_MARGIN } from "$src/constants";
@@ -32,6 +33,18 @@ export const startFling = (
 	// can change mid-flight (zoom, resize, devtools), and a stale target
 	// would carry the bubble to a coordinate that no longer exists.
 	const targetLeft = (): number => sideRestLeft(el, side);
+
+	// Reduced motion: the throw still lands where the velocity pointed
+	// (side from the projected coast), just without the flight.
+	if (prefersReducedMotion()) {
+		return runSimulation(() => {
+			el.style.left = `${targetLeft()}px`;
+			el.style.top = `${clampTop(el, rect.top)}px`;
+			setSnappedSide(el, side);
+			onRest?.();
+			return true;
+		});
+	}
 
 	// A bubble released outside the vertical bounds (dragged off-screen)
 	// springs back to the violated edge instead of teleporting to it.

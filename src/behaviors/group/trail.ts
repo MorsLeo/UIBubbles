@@ -1,4 +1,5 @@
 import { restingPosition } from "$src/behaviors/group/layout";
+import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { runSimulation } from "$src/behaviors/simulate";
 import { STACK_OFFSET } from "$src/constants";
 import { springStep } from "$src/physics/spring";
@@ -82,10 +83,20 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 		let x: AxisState = { position: rect.left, velocity: 0 };
 		let y: AxisState = { position: rect.top, velocity: 0 };
 
+		// Reduced motion drops the chase springs: the group rides the
+		// pointer as one rigid block — the lag IS the decoration.
+		const reduced = prefersReducedMotion();
+
 		chases.set(
 			member.id,
 			runSimulation((dt) => {
 				const t = target();
+				if (reduced) {
+					member.el.style.left = `${t.left}px`;
+					member.el.style.top = `${t.top}px`;
+					return false;
+				}
+
 				x = springStep(x, t.left, dt * rate);
 				y = springStep(y, t.top, dt * rate);
 				member.el.style.left = `${x.position}px`;
