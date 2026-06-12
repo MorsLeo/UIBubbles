@@ -161,6 +161,10 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		return true;
 	};
 
+	/** Off-screen left position just past the group's docked side. */
+	const offscreenLeft = (el: HTMLElement) =>
+		side === "left" ? -(el.offsetWidth + EDGE_MARGIN) : window.innerWidth + EDGE_MARGIN;
+
 	return {
 		// Panels position off the group, not any one bubble: below the
 		// flock's centroid. At rest the open row is page-centered, so the
@@ -189,9 +193,10 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			feedback.attach(el);
 
 			// The first bubble enters with the standard fling and teaches the
-			// group its dock on landing.
+			// group its dock on landing — from the remembered side, so a
+			// group that lived on the left comes back on the left.
 			if (members.length === 1) {
-				el.style.left = `${window.innerWidth + EDGE_MARGIN}px`;
+				el.style.left = `${offscreenLeft(el)}px`;
 				el.style.top = `${clampTop(el, (window.innerHeight - el.offsetHeight) / 2)}px`;
 				motions.set(
 					member.id,
@@ -214,15 +219,15 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				return;
 			}
 
-			// Joins the docked stack from off-screen at slot height; everyone
-			// redistributes around the group center.
+			// Joins the docked stack from off-screen on the group's side, at
+			// slot height; everyone redistributes around the group center.
 			centerY ??= window.innerHeight / 2;
-			el.style.left = `${window.innerWidth + EDGE_MARGIN}px`;
+			el.style.left = `${offscreenLeft(el)}px`;
 			el.style.top = `${dockSlot(member, docked(), centerY, side).top}px`;
 			if (joinDragTrail(member)) return;
 
 			settleMembers();
-			seedMotion(member, { x: -LAUNCH_SPEED, y: 0 });
+			seedMotion(member, { x: side === "left" ? LAUNCH_SPEED : -LAUNCH_SPEED, y: 0 });
 		},
 
 		removeMember(id) {
