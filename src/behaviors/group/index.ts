@@ -257,6 +257,10 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				mode = "docked";
 				activeId = undefined;
 				flingLeaderId = undefined;
+				// The dock height dies with the group, so a reborn group
+				// re-centers as one — only the side is remembered. While any
+				// member remains (even mid-exit), re-adds keep the old dock.
+				centerY = undefined;
 				return;
 			}
 
