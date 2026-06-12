@@ -1,0 +1,31 @@
+name: Publish
+
+# Publishing is a deliberate act: it fires only when a GitHub Release is
+# published (create a v* tag + release on launch day). Requires an npm
+# granular access token with publish rights saved as the NPM_TOKEN secret.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  # Required for npm --provenance attestation.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      # setup-node writes the .npmrc that npm publish authenticates with.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run build
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
