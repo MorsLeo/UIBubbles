@@ -1,7 +1,14 @@
 {
-	"name": "bubble",
-	"version": "0.0.1",
+	"name": "@hyperplexed/bubbles",
+	"version": "0.1.0",
 	"description": "Android-style app bubbles for the web — floating, draggable, expandable overlay bubbles",
+	"author": "Hyperplexed",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/githyperplexed/bubbles.git"
+	},
+	"homepage": "https://github.com/githyperplexed/bubbles#readme",
+	"bugs": "https://github.com/githyperplexed/bubbles/issues",
 	"type": "module",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
@@ -16,20 +23,28 @@
 		"dist"
 	],
 	"sideEffects": false,
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
 		"build:site": "vite build",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"prepublishOnly": "bun run test && bun run build"
 	},
 	"keywords": [
 		"bubbles",
 		"chat-heads",
 		"floating",
 		"overlay",
-		"ui"
+		"ui",
+		"draggable",
+		"widget",
+		"vanilla",
+		"typescript"
 	],
 	"license": "MIT",
 	"devDependencies": {
