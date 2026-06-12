@@ -15,6 +15,18 @@ const MAX_PULL = 64;
 /** How much of the cursor's offset from the rest point the captured pair follows. */
 const TETHER_FACTOR = 0.65;
 
+/** Fraction of the smaller viewport dimension capping the capture radius on small screens. */
+const CAPTURE_RADIUS_FRACTION = 0.25;
+
+/** Fraction of the smaller viewport dimension capping the attraction radius on small screens. */
+const ATTRACT_RADIUS_FRACTION = 0.75;
+
+// The radii read the viewport live: desktop keeps the stock feel, while
+// on a phone the capture and lean ranges shrink to stay proportionate.
+const minViewport = () => Math.min(window.innerWidth, window.innerHeight);
+const captureRadius = () => Math.min(DISMISS_CAPTURE_RADIUS, minViewport() * CAPTURE_RADIUS_FRACTION);
+const attractRadius = () => Math.min(DISMISS_ATTRACT_RADIUS, minViewport() * ATTRACT_RADIUS_FRACTION);
+
 export const createDismissZone = (): DismissZone => {
 	const { el, setCaptured } = createDismissTargetElement();
 
@@ -44,11 +56,11 @@ export const createDismissZone = (): DismissZone => {
 		const dx = x - restCenterX();
 		const dy = y - restCenterY();
 		const distance = Math.hypot(dx, dy);
-		if (distance >= DISMISS_ATTRACT_RADIUS || distance === 0) {
+		if (distance >= attractRadius() || distance === 0) {
 			return { left: restLeft(), top: restTop() };
 		}
 
-		const pull = MAX_PULL * (1 - distance / DISMISS_ATTRACT_RADIUS) ** 2;
+		const pull = MAX_PULL * (1 - distance / attractRadius()) ** 2;
 		return {
 			left: restLeft() + (dx / distance) * pull,
 			top: restTop() + (dy / distance) * pull
@@ -132,10 +144,7 @@ export const createDismissZone = (): DismissZone => {
 
 			// Escape is measured from the rest point — the tethered pair moves
 			// with the cursor, so its own center can't be the boundary.
-			if (
-				Math.hypot(x - restCenterX(), y - restCenterY()) >
-				DISMISS_CAPTURE_RADIUS + RELEASE_SLACK
-			) {
+			if (Math.hypot(x - restCenterX(), y - restCenterY()) > captureRadius() + RELEASE_SLACK) {
 				isCaptured = false;
 				setCaptured(false);
 				transitionTo(pullPosition);
@@ -148,7 +157,7 @@ export const createDismissZone = (): DismissZone => {
 		// Same reference frame as the escape check above — measuring capture
 		// from the (displaced) live center instead would re-capture instantly
 		// after every escape and oscillate at the boundary.
-		if (Math.hypot(x - restCenterX(), y - restCenterY()) < DISMISS_CAPTURE_RADIUS) {
+		if (Math.hypot(x - restCenterX(), y - restCenterY()) < captureRadius()) {
 			isCaptured = true;
 			setCaptured(true);
 			transitionTo(tetherPosition);
