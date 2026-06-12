@@ -454,8 +454,8 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			const member = byId(id);
 			if (!member) return;
 
-			cancelMotion(id);
-
+			// No motion cancel: expand/collapse re-settle everything, and a
+			// panel switch must not freeze a bubble mid-glide.
 			if (mode === "docked") {
 				expand();
 				return;
