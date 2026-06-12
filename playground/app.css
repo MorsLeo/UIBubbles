@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* Page-level light theme, toggled on <html> by the playground controls. */
+@custom-variant light (&:where(.light, .light *));
+
+/* The one focus treatment every interactive control shares: no native
+   outline, a 2px ring offset from the surface, offset color matching
+   the page/panel background per theme. */
+@layer components {
+	.focus-ring {
+		@apply outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black light:focus-visible:ring-zinc-400 light:focus-visible:ring-offset-white;
+	}
+
+	/* Panel scroll regions: a thin neutral scrollbar, and the region ends
+	   above the surface's rounded corner (margin, since a scrollbar always
+	   hugs the container edge no matter the padding). */
+	.panel-scroll {
+		scrollbar-width: thin;
+		scrollbar-color: rgb(128 128 128 / 0.5) transparent;
+	}
+}

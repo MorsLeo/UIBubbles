@@ -12,7 +12,6 @@
 	stroke-linecap="round"
 	stroke-linejoin="round"
 >
-	<path d="M9 18V5l12-2v13" />
-	<circle cx="6" cy="18" r="3" />
-	<circle cx="18" cy="16" r="3" />
+	<rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+	<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
 </svg>

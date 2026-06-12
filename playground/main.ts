@@ -1,8 +1,5 @@
-import Cards from "$playground/components/cards.svelte";
-import { createBubbles } from "$src/index";
+import App from "$playground/components/app.svelte";
 import { mount } from "svelte";
 import "$playground/app.css";
 
-const manager = createBubbles();
-
-mount(Cards, { target: document.body, props: { manager } });
+mount(App, { target: document.body });

@@ -3,7 +3,12 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>bubbles playground</title>
+		<meta
+			name="description"
+			content="Android-style app bubbles for the web — floating, draggable, expandable overlay bubbles for any website."
+		/>
+		<link rel="icon" type="image/svg+xml" href="/bubbles-dark.svg" />
+		<title>bubbles — app bubbles for the web</title>
 		<style>
 			/* Dot grid fading into the page background at the center; colors
 			   ride the Tailwind palette variables that app.css defines. */
@@ -14,6 +19,15 @@
 				background-size:
 					100% 100%,
 					40px 40px;
+			}
+
+			/* The light preset flips the whole page with it — the theme names
+			   describe the host page, and the playground plays the host. */
+			html.light body {
+				background-color: var(--color-white);
+				background-image:
+					radial-gradient(900px circle at 50% 40%, var(--color-white), transparent 70%),
+					radial-gradient(var(--color-zinc-200) 1px, transparent 1px);
 			}
 		</style>
 	</head>

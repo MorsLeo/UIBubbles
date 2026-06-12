@@ -12,7 +12,13 @@
 	stroke-linecap="round"
 	stroke-linejoin="round"
 >
-	<path
-		d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"
-	/>
+	<path d="M10 8h.01" />
+	<path d="M12 12h.01" />
+	<path d="M14 8h.01" />
+	<path d="M16 12h.01" />
+	<path d="M18 8h.01" />
+	<path d="M6 8h.01" />
+	<path d="M7 16h10" />
+	<path d="M8 12h.01" />
+	<rect width="20" height="16" x="2" y="4" rx="2" />
 </svg>
