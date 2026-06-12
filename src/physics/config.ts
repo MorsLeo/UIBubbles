@@ -6,6 +6,22 @@
 /** Fraction of coasting velocity remaining after one second. */
 export const FRICTION = 0.02;
 
+/**
+ * Multiplier on touch/pen release velocity. Mouse pointers carry OS
+ * acceleration, so a wrist flick reads several thousand px/s; a thumb
+ * on glass is 1:1 with the hand and tops out far lower. Without the
+ * boost, the same throw physics tuned for mouse velocities reads as
+ * coasting through mud on touch screens.
+ */
+export const TOUCH_VELOCITY_BOOST = 1.5;
+
+/**
+ * Time-scale on the trail's chase springs during a touch drag, so the
+ * group tracks a finger as tightly as it tracks an accelerated mouse
+ * pointer. 1 leaves the mouse feel untouched.
+ */
+export const TOUCH_CHASE_RATE = 1.5;
+
 /** Spring pull toward the wall (1/s²). */
 export const SPRING_STIFFNESS = 170;
 

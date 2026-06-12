@@ -19,6 +19,10 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 	let grabX = 0;
 	let grabY = 0;
 
+	// Time-scale on the chase springs: touch drags run them faster so the
+	// group tracks a finger as tightly as an accelerated mouse pointer.
+	let rate = 1;
+
 	const zoneTarget = (member: GroupMember): GlideTarget => {
 		const c = zone.center();
 		return {
@@ -53,6 +57,10 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 		grabY = y;
 	};
 
+	const setRate = (next: number) => {
+		rate = next;
+	};
+
 	const cancel = (id: string) => {
 		chases.get(id)?.();
 		chases.delete(id);
@@ -78,8 +86,8 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 			member.id,
 			runSimulation((dt) => {
 				const t = target();
-				x = springStep(x, t.left, dt);
-				y = springStep(y, t.top, dt);
+				x = springStep(x, t.left, dt * rate);
+				y = springStep(y, t.top, dt * rate);
 				member.el.style.left = `${x.position}px`;
 				member.el.style.top = `${y.position}px`;
 				return false; // Lives until the group settles or is dismissed.
@@ -87,5 +95,5 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 		);
 	};
 
-	return { setPointer, chase, cancel, cancelAll };
+	return { setPointer, setRate, chase, cancel, cancelAll };
 };

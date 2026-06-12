@@ -7,6 +7,7 @@ import { createDragTrail } from "$src/behaviors/group/trail";
 import { chooseSide } from "$src/behaviors/snap";
 import { EDGE_MARGIN, Z_BUBBLE_TOP } from "$src/constants";
 import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
+import { TOUCH_CHASE_RATE } from "$src/physics/config";
 import type {
 	BubbleGroup,
 	BubbleSide,
@@ -344,7 +345,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			switchTo(member);
 		},
 
-		onDragStart(id, x, y) {
+		onDragStart(id, x, y, coarse) {
 			const member = byId(id);
 			if (!member) return false;
 
@@ -365,6 +366,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// the pointer. The group owns every position from here.
 			groupDragging = true;
 			trail.setPointer(x, y);
+			trail.setRate(coarse ? TOUCH_CHASE_RATE : 1);
 			syncZOrder();
 
 			const leaderId = docked()[0]?.id ?? id;

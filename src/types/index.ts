@@ -65,11 +65,12 @@ export interface DragHooks {
 	/** Press released within the tap dead zone. */
 	onTap?: () => void;
 	/**
-	 * Pointer left the dead zone and a real drag began. Return true to take
-	 * over positioning — the drag then only reports pointer moves and keeps
+	 * Pointer left the dead zone and a real drag began. `coarse` is true
+	 * for direct-contact pointers (touch/pen). Return true to take over
+	 * positioning — the drag then only reports pointer moves and keeps
 	 * the dismiss target tracking, never writing the element's position.
 	 */
-	onDragStart?: (x: number, y: number) => boolean | void;
+	onDragStart?: (x: number, y: number, coarse: boolean) => boolean | void;
 	/** Pointer moved during a taken-over drag. */
 	onDragMove?: (x: number, y: number) => void;
 	/** Return true to take over the release and suppress the throw. */
@@ -107,7 +108,7 @@ export interface BubbleGroup {
 	restoreMember(id: string): boolean;
 	onTap(id: string): void;
 	/** True when the group takes over the drag (docked trail drags). */
-	onDragStart(id: string, x: number, y: number): boolean;
+	onDragStart(id: string, x: number, y: number, coarse: boolean): boolean;
 	onDragMove(x: number, y: number): void;
 	onDragEnd(id: string, velocity: Velocity): boolean;
 	onDismiss(id: string): void;
@@ -118,6 +119,8 @@ export interface BubbleGroup {
 export interface DragTrail {
 	/** Feeds the live pointer position — the leader's target. */
 	setPointer(x: number, y: number): void;
+	/** Time-scale for the chase springs (1 = stock feel); set per drag. */
+	setRate(rate: number): void;
 	/** (Re)starts a member's chase; the leader chases the pointer, others chain toward it. */
 	chase(member: GroupMember, leaderId: string): void;
 	cancel(id: string): void;

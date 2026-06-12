@@ -3,6 +3,7 @@ import { startFling } from "$src/behaviors/fling";
 import { clearSnappedSide } from "$src/behaviors/snap";
 import { createVelocityTracker } from "$src/behaviors/velocity";
 import { TAP_DRAG_THRESHOLD } from "$src/constants";
+import { TOUCH_VELOCITY_BOOST } from "$src/physics/config";
 import type { DismissZone, DragHooks } from "$src/types";
 
 export const makeDraggable = (
@@ -48,7 +49,8 @@ export const makeDraggable = (
 		// bubble may still be gliding under the pointer during the dead zone.
 		const beginDrag = (e: PointerEvent) => {
 			dragging = true;
-			takenOver = hooks.onDragStart?.(e.clientX, e.clientY) === true;
+			const coarse = e.pointerType !== "mouse";
+			takenOver = hooks.onDragStart?.(e.clientX, e.clientY, coarse) === true;
 			clearSnappedSide(el);
 
 			const rect = el.getBoundingClientRect();
@@ -103,7 +105,11 @@ export const makeDraggable = (
 					follower?.cancel();
 					dismissZone?.hide();
 
-					const velocity = tracker.getVelocity(e.timeStamp);
+					// Direct-contact pointers have no OS acceleration, so their
+					// raw px/s runs far below a mouse's; the boost levels the throw.
+					const boost = e.pointerType === "mouse" ? 1 : TOUCH_VELOCITY_BOOST;
+					const raw = tracker.getVelocity(e.timeStamp);
+					const velocity = { x: raw.x * boost, y: raw.y * boost };
 					if (!hooks.onDragEnd?.(velocity)) {
 						cancelFling = startFling(el, velocity);
 					}
