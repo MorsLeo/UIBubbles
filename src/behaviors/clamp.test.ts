@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const fakeEl = (): HTMLElement => ({ offsetHeight: 56 }) as unknown as HTMLElement;
 
 beforeAll(() => {
-	vi.stubGlobal("window", { innerHeight: 800 });
+	vi.stubGlobal("document", { documentElement: { clientHeight: 800 } });
 });
 
 afterAll(() => {

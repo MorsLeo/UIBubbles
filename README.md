@@ -40,15 +40,16 @@ That's a working bubble: drag it anywhere and it snaps to the nearest edge, tap 
 
 Creates a manager. Touches no DOM until the first `add()`, so it's safe to construct during app setup (browser only — there is no SSR rendering to do).
 
-| Option           | Type                   | Default   | Description                                                                                                                    |
-| ---------------- | ---------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `theme`          | `"dark" \| "light"`    | `"dark"`  | Preset color scheme, named for the host page it suits. `"dark"` pairs a bright bubble with a dark panel; `"light"` inverts it. |
-| `colors`         | `Partial<BubbleTheme>` | —         | Per-token color overrides applied on top of the preset. See [Theming](#theming).                                               |
-| `side`           | `"left" \| "right"`    | `"right"` | Screen edge the docked stack starts on. Users can drag it anywhere afterward.                                                  |
-| `vertical`       | `number`               | `0.5`     | Vertical center of the docked stack as a fraction of the viewport height (`0` top, `1` bottom), clamped to the screen margins. |
-| `panelWidth`     | `number`               | `360`     | Expanded panel width in px. The viewport always caps it.                                                                       |
-| `panelMaxHeight` | `number`               | —         | Cap on the panel height in px. Without it the panel may use the full height under the bubble row.                              |
-| `maxBubbles`     | `number`               | `5`       | Most bubbles the manager will hold; `add()` ignores requests beyond it.                                                        |
+| Option           | Type                   | Default    | Description                                                                                                                          |
+| ---------------- | ---------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `theme`          | `"dark" \| "light"`    | `"dark"`   | Preset color scheme, named for the host page it suits. `"dark"` pairs a bright bubble with a dark panel; `"light"` inverts it.       |
+| `colors`         | `Partial<BubbleTheme>` | —          | Per-token color overrides applied on top of the preset. See [Theming](#theming).                                                     |
+| `side`           | `"left" \| "right"`    | `"right"`  | Screen edge the docked stack starts on. Users can drag it anywhere afterward; with `configure()` it applies to the next fresh entry. |
+| `vertical`       | `number`               | `0.5`      | Vertical center of the docked stack as a fraction of the viewport height (`0` top, `1` bottom), clamped to the screen margins.       |
+| `panelWidth`     | `number`               | `480`      | Expanded panel width in px. The viewport always caps it.                                                                             |
+| `panelMaxHeight` | `number`               | —          | Cap on the panel height in px. Without it the panel may use the full height under the bubble row.                                    |
+| `maxBubbles`     | `number`               | `5`        | Most bubbles the manager will hold; `add()` returns `false` beyond it.                                                               |
+| `initialState`   | `"docked" \| "open"`   | `"docked"` | The state a fresh flock enters in. `"open"` drops every bubble straight into its row slot — never docked-then-risen.                 |
 
 ```ts
 const manager = createBubbles({
@@ -64,7 +65,7 @@ const manager = createBubbles({
 
 ### `manager.add(options)`
 
-Mounts a bubble. It flies in from the docked side and joins the group. Re-adding an id whose dismissal is still animating reverses the exit.
+Mounts a bubble. It flies in from the docked side and joins the group. Re-adding an id whose dismissal is still animating reverses the exit. Returns `true` when the bubble is present after the call (newly added, already mounted, or reclaimed mid-dismissal) and `false` only when the manager is at `maxBubbles` and the request was ignored. Bubbles still animating out after `remove()` don't count toward the cap, so an evict-then-add swap works in one tick.
 
 | Option      | Type          | Description                                                                                                                     |
 | ----------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -78,9 +79,26 @@ Mounts a bubble. It flies in from the docked side and joins the group. Re-adding
 
 Programmatic removal — animates the bubble off-screen, then unmounts it. Does **not** fire `onDismiss` (that's reserved for user-initiated dismissal, so you can mirror state without loops).
 
+### `manager.configure(options)`
+
+Applies new options to the live manager — no remounting, no re-entry animations. Theme and colors repaint every bubble, panel, and the dismiss target in place; panel sizing reflows open panels; a changed `maxBubbles` governs future `add()` calls (a lower cap never evicts live bubbles). `side`, `vertical`, and `initialState` describe how a fresh flock enters, so they take effect once every bubble is gone and the next one enters (or on the next page load). Omitted options return to their defaults, same as `createBubbles`.
+
+One boundary to know: elements _you_ supplied (`icon`, `content`) are yours — the library never restyles them, so react to your own theme state there.
+
+```ts
+// e.g. follow the host page's dark-mode toggle:
+darkModeToggle.addEventListener("change", () => {
+	manager.configure({ theme: darkModeToggle.checked ? "dark" : "light" });
+});
+```
+
 ### `manager.toggle()`
 
 Expands or collapses the group, moving keyboard focus with it. Bind this to your own shortcut — the library ships no global hotkey, so it can never collide with your page's.
+
+### `manager.state()`
+
+The flock's current arrangement: `"docked"` (stacked on a screen edge) or `"open"` (the top row, panel showing). With no bubbles mounted, returns the state the next flock will enter in — the configured `initialState`. Useful for host chrome that reacts to the overlay, e.g. dimming the page while the row is open.
 
 ### `manager.destroy()`
 

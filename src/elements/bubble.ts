@@ -43,9 +43,16 @@ export const setBubblePressed = (el: HTMLElement, pressed: boolean): void => {
 	visualControls.get(el)?.setPressed(pressed);
 };
 
-// Lucide "message-square" (playground/icons/chat.svg), inlined because
-// the library builds with plain tsc — a Vite-style ?raw svg import
-// would ship an unresolvable specifier in dist.
+/** Per-element repaint hooks, so configure() can retheme live bubbles. */
+const themeControls = new WeakMap<HTMLElement, (theme: BubbleTheme) => void>();
+
+export const setBubbleTheme = (el: HTMLElement, theme: BubbleTheme): void => {
+	themeControls.get(el)?.(theme);
+};
+
+// Lucide "message-square", inlined because the library builds with
+// plain tsc — a Vite-style ?raw svg import would ship an unresolvable
+// specifier in dist.
 const createChatIcon = (stroke: string): SVGSVGElement => {
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
@@ -67,7 +74,7 @@ const createChatIcon = (stroke: string): SVGSVGElement => {
  * blurs the rasterized layer. Shows the consumer's icon, or the default
  * chat glyph when none is given.
  */
-const createSurface = (theme: BubbleTheme, icon?: HTMLElement): HTMLElement => {
+const createSurface = (theme: BubbleTheme, icon: Element): HTMLElement => {
 	const surface = document.createElement("div");
 	Object.assign(surface.style, {
 		width: `${SURFACE_SIZE}px`,
@@ -85,7 +92,7 @@ const createSurface = (theme: BubbleTheme, icon?: HTMLElement): HTMLElement => {
 		transition: "scale 150ms ease, outline-color 150ms ease",
 		pointerEvents: "none"
 	} satisfies Partial<CSSStyleDeclaration>);
-	surface.appendChild(icon ?? createChatIcon(theme.bubbleIcon));
+	surface.appendChild(icon);
 
 	// The bubble names itself via aria-label; its visual innards (icon,
 	// ring, consumer markup) would only add noise to the tree.
@@ -94,10 +101,11 @@ const createSurface = (theme: BubbleTheme, icon?: HTMLElement): HTMLElement => {
 };
 
 export const createBubbleElement = (
-	theme: BubbleTheme,
+	initialTheme: BubbleTheme,
 	icon?: HTMLElement,
 	label?: string
 ): HTMLElement => {
+	let theme = initialTheme;
 	const el = document.createElement("div");
 
 	// The surface draws its own focus ring, so the native one stays off.
@@ -119,7 +127,9 @@ export const createBubbleElement = (
 	el.tabIndex = 0;
 	el.setAttribute("aria-label", label ?? "Bubble");
 
-	const surface = createSurface(theme, icon);
+	// The fallback glyph is the library's to retheme; a consumer icon isn't.
+	const fallbackIcon = icon ? undefined : createChatIcon(theme.bubbleIcon);
+	const surface = createSurface(theme, icon ?? fallbackIcon!);
 	el.appendChild(surface);
 
 	let hovered = false;
@@ -157,6 +167,14 @@ export const createBubbleElement = (
 			pressed = next;
 			syncSurfaceScale();
 		}
+	});
+
+	themeControls.set(el, (next) => {
+		theme = next;
+		surface.style.background = theme.bubbleSurface;
+		surface.style.boxShadow = theme.bubbleShadow;
+		fallbackIcon?.setAttribute("stroke", theme.bubbleIcon);
+		if (focused) surface.style.outlineColor = theme.focusRing;
 	});
 
 	el.addEventListener("pointerenter", () => setBubbleHover(el, true));

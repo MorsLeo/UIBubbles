@@ -1,7 +1,8 @@
 import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { EDGE_MARGIN, Z_PANEL } from "$src/constants";
 import { BUBBLE_SIZE } from "$src/elements/bubble";
-import type { BubbleTheme, PanelController } from "$src/types";
+import type { PanelAppearance, PanelController } from "$src/types";
+import { viewportWidth } from "$src/viewport";
 
 /** Gap between the bubble and the panel below it. */
 const PANEL_GAP = 18;
@@ -42,9 +43,7 @@ export const createPanel = (
 	options: {
 		id: string;
 		label?: string;
-		theme: BubbleTheme;
-		width: number;
-		maxHeight?: number;
+		appearance: PanelAppearance;
 		onEscape: () => void;
 	}
 ): PanelController => {
@@ -69,14 +68,7 @@ export const createPanel = (
 		display: "none",
 		flexDirection: "column",
 		zIndex: `${Z_PANEL}`,
-		transformOrigin: "top center",
-		// The viewport always caps the consumer's size choices: width inside
-		// the side margins, height inside the gap under a top-docked bubble.
-		width: `min(${options.width}px, calc(100vw - ${EDGE_MARGIN * 2}px))`,
-		maxHeight:
-			options.maxHeight === undefined
-				? `calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px)`
-				: `min(${options.maxHeight}px, calc(100vh - ${PANEL_TOP + EDGE_MARGIN}px))`
+		transformOrigin: "top center"
 	} satisfies Partial<CSSStyleDeclaration>);
 
 	const caret = document.createElement("div");
@@ -85,8 +77,7 @@ export const createPanel = (
 		top: `${-CARET_SIZE / 2}px`,
 		width: `${CARET_SIZE}px`,
 		height: `${CARET_SIZE}px`,
-		rotate: "45deg",
-		background: options.theme.panelSurface
+		rotate: "45deg"
 	} satisfies Partial<CSSStyleDeclaration>);
 
 	// The surface owns background, clipping, and the height constraint —
@@ -98,11 +89,26 @@ export const createPanel = (
 		flexDirection: "column",
 		minHeight: "0",
 		overflow: "hidden",
-		borderRadius: `${SURFACE_RADIUS}px`,
-		background: options.theme.panelSurface,
-		color: options.theme.panelText,
-		boxShadow: options.theme.panelShadow
+		borderRadius: `${SURFACE_RADIUS}px`
 	} satisfies Partial<CSSStyleDeclaration>);
+
+	// All colors and sizing live here so configure() can repaint in place.
+	// The viewport always caps the consumer's size choices: width inside
+	// the side margins, height inside the gap under a top-docked bubble.
+	// Percentages, not vw/vh — the panel is fixed, so % resolves against
+	// the scrollbar-free viewport while vw/vh include page scrollbars.
+	const setAppearance = ({ theme, width, maxHeight }: PanelAppearance) => {
+		el.style.width = `min(${width}px, calc(100% - ${EDGE_MARGIN * 2}px))`;
+		el.style.maxHeight =
+			maxHeight === undefined
+				? `calc(100% - ${PANEL_TOP + EDGE_MARGIN}px)`
+				: `min(${maxHeight}px, calc(100% - ${PANEL_TOP + EDGE_MARGIN}px))`;
+		caret.style.background = theme.panelSurface;
+		surface.style.background = theme.panelSurface;
+		surface.style.color = theme.panelText;
+		surface.style.boxShadow = theme.panelShadow;
+	};
+	setAppearance(options.appearance);
 
 	surface.appendChild(content);
 	el.appendChild(caret);
@@ -113,7 +119,7 @@ export const createPanel = (
 		const point = attachPoint();
 		if (point === undefined) return;
 
-		const maxLeft = window.innerWidth - el.offsetWidth - EDGE_MARGIN;
+		const maxLeft = viewportWidth() - el.offsetWidth - EDGE_MARGIN;
 		const centered = point.x - el.offsetWidth / 2;
 		const left = Math.min(Math.max(centered, EDGE_MARGIN), maxLeft);
 		el.style.left = `${left}px`;
@@ -190,5 +196,5 @@ export const createPanel = (
 		el.remove();
 	};
 
-	return { show, hide, destroy };
+	return { show, hide, setAppearance, destroy };
 };

@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const fakeEl = (): HTMLElement => ({ offsetWidth: 56, dataset: {} }) as unknown as HTMLElement;
 
 beforeAll(() => {
-	vi.stubGlobal("window", { innerWidth: 1000 });
+	vi.stubGlobal("document", { documentElement: { clientWidth: 1000 } });
 });
 
 afterAll(() => {

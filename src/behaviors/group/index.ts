@@ -12,11 +12,13 @@ import { TOUCH_CHASE_RATE } from "$src/physics/config";
 import type {
 	BubbleGroup,
 	BubbleSide,
+	BubblesState,
 	DismissZone,
 	GlideTarget,
 	GroupCallbacks,
 	GroupMember
 } from "$src/types";
+import { viewportHeight, viewportWidth } from "$src/viewport";
 
 /** How close (px) a bubble must be to its row slot before its panel appears. */
 const PANEL_APPEAR_DISTANCE = 100;
@@ -38,12 +40,12 @@ const DOCK_NUDGE = 80;
 export const createBubbleGroup = (
 	zone: DismissZone,
 	callbacks: GroupCallbacks,
-	config: { side: BubbleSide; vertical: number }
+	config: { side: BubbleSide; vertical: number; initialState: BubblesState }
 ): BubbleGroup => {
 	const members: GroupMember[] = [];
 	const motions = new Map<string, () => void>();
 	const retiring = new Set<string>();
-	let mode: "docked" | "open" = "docked";
+	let mode: BubblesState = config.initialState;
 	let side: BubbleSide = config.side;
 	let centerY: number | undefined;
 	let activeId: string | undefined;
@@ -55,7 +57,7 @@ export const createBubbleGroup = (
 	const byId = (id: string) => members.find((m) => m.id === id);
 
 	/** Where the dock centers until an interaction teaches it otherwise. */
-	const defaultCenterY = () => window.innerHeight * config.vertical;
+	const defaultCenterY = () => viewportHeight() * config.vertical;
 
 	// All layout math sees only the docked members: a retiring bubble stops
 	// counting the moment its exit starts, so the others redistribute
@@ -220,7 +222,7 @@ export const createBubbleGroup = (
 
 	/** Off-screen left position just past the group's docked side. */
 	const offscreenLeft = (el: HTMLElement) =>
-		side === "left" ? -(el.offsetWidth + EDGE_MARGIN) : window.innerWidth + EDGE_MARGIN;
+		side === "left" ? -(el.offsetWidth + EDGE_MARGIN) : viewportWidth() + EDGE_MARGIN;
 
 	return {
 		// Panels position off the group, not any one bubble: below the
@@ -251,9 +253,32 @@ export const createBubbleGroup = (
 			feedback.attach(el);
 			fadeInIfReduced(el);
 
+			// Checked before the first-member entrance: a group born open
+			// (initialState) receives even its first bubble straight into
+			// the row — never docked-then-risen.
+			if (mode === "open") {
+				// Falls in from off-screen top into the far-left slot and takes
+				// the active panel (revealed by its arrival); the row shifts over.
+				el.style.left = `${rowSlot(member, docked()).left}px`;
+				el.style.top = `${-(el.offsetHeight + EDGE_MARGIN)}px`;
+				hideAllPanels();
+				settleMembers();
+
+				// Every entrant still above the viewport falls straight down:
+				// x pinned to its current slot (invisible up there) and the
+				// launch re-seeded — settling just stole it from earlier
+				// same-tick entrants, which otherwise drift in at angles
+				// while only the newest falls at full speed.
+				for (const m of docked()) {
+					if (m.el.getBoundingClientRect().bottom > 0) continue;
+					m.el.style.left = `${rowSlot(m, docked()).left}px`;
+					seedMotion(m, { x: 0, y: LAUNCH_SPEED });
+				}
+				return;
+			}
+
 			// The first bubble enters with the standard fling and teaches the
-			// group its dock on landing — from the remembered side, so a
-			// group that lived on the left comes back on the left.
+			// group its dock on landing.
 			if (members.length === 1) {
 				el.style.left = `${offscreenLeft(el)}px`;
 				el.style.top = `${clampTop(el, defaultCenterY() - el.offsetHeight / 2)}px`;
@@ -264,17 +289,6 @@ export const createBubbleGroup = (
 						adoptDockFrom(member);
 					})
 				);
-				return;
-			}
-
-			if (mode === "open") {
-				// Falls in from off-screen top into the far-left slot and takes
-				// the active panel (revealed by its arrival); the row shifts over.
-				el.style.left = `${rowSlot(member, docked()).left}px`;
-				el.style.top = `${-(el.offsetHeight + EDGE_MARGIN)}px`;
-				hideAllPanels();
-				settleMembers();
-				seedMotion(member, { x: 0, y: LAUNCH_SPEED });
 				return;
 			}
 
@@ -388,7 +402,7 @@ export const createBubbleGroup = (
 					left:
 						exitSide === "left"
 							? -(member.el.offsetWidth + EDGE_MARGIN)
-							: window.innerWidth + EDGE_MARGIN,
+							: viewportWidth() + EDGE_MARGIN,
 					top: member.el.getBoundingClientRect().top
 				};
 			};
@@ -426,9 +440,9 @@ export const createBubbleGroup = (
 			const rect = member.el.getBoundingClientRect();
 			const gone =
 				rect.right <= 0 ||
-				rect.left >= window.innerWidth ||
+				rect.left >= viewportWidth() ||
 				rect.bottom <= 0 ||
-				rect.top >= window.innerHeight;
+				rect.top >= viewportHeight();
 			if (gone) {
 				if (mode === "open") {
 					member.el.style.left = `${rowSlot(member, docked()).left}px`;
@@ -541,19 +555,25 @@ export const createBubbleGroup = (
 			docked()[0]?.el.focus();
 		},
 
+		state: () => mode,
+
 		onDragStart(id, x, y, coarse) {
 			const member = byId(id);
 			if (!member) return false;
 
 			cancelMotion(id);
 
-			// Row bubbles drag individually (the per-bubble removal path);
-			// docked bubbles move the whole group as a trail.
+			// Row bubbles drag individually (the per-bubble removal path),
+			// but on the same chase spring as a docked drag — one drag feel
+			// everywhere, and the trail's capture handling comes with it.
 			if (mode === "open") {
 				rowDraggingId = id;
 				member.el.style.zIndex = `${Z_BUBBLE_TOP}`;
 				hideAllPanels();
-				return false;
+				trail.setPointer(x, y);
+				trail.setRate(coarse ? TOUCH_CHASE_RATE : 1);
+				trail.chase(member, id);
+				return true;
 			}
 
 			// A docked drag is always led by the topmost bubble, whichever
@@ -588,6 +608,7 @@ export const createBubbleGroup = (
 			// comes back once it arrives.
 			if (rowDraggingId === id) {
 				rowDraggingId = undefined;
+				trail.cancel(id);
 				motions.set(
 					id,
 					startGlide(member.el, () => rowSlot(member, docked()), {

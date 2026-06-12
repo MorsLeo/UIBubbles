@@ -55,11 +55,8 @@ beforeEach(() => {
 	vi.stubGlobal("cancelAnimationFrame", (id: number) => {
 		callbacks.delete(id);
 	});
-	vi.stubGlobal("window", {
-		innerWidth: 1000,
-		innerHeight: 800,
-		matchMedia: () => ({ matches: false })
-	});
+	vi.stubGlobal("window", { matchMedia: () => ({ matches: false }) });
+	vi.stubGlobal("document", { documentElement: { clientWidth: 1000, clientHeight: 800 } });
 });
 
 afterEach(() => {

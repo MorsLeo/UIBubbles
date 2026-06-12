@@ -2,7 +2,7 @@ import { createDismissZone } from "$src/behaviors/dismiss";
 import { makeDraggable } from "$src/behaviors/drag";
 import { createBubbleGroup } from "$src/behaviors/group";
 import { makeKeyInteractive } from "$src/behaviors/keyboard";
-import { createBubbleElement } from "$src/elements/bubble";
+import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
 import { resolveOptions } from "$src/options";
 import type {
@@ -19,6 +19,7 @@ export type {
 	BubbleOptions,
 	BubbleSide,
 	BubblesOptions,
+	BubblesState,
 	BubbleTheme,
 	BubbleThemeName
 } from "$src/types";
@@ -28,22 +29,46 @@ export type {
  * for adding and removing bubbles.
  */
 export const createBubbles = (options?: BubblesOptions): BubbleManager => {
-	const config = resolveOptions(options);
+	let config = resolveOptions(options);
 	const bubbles = new Map<string, BubbleInstance>();
+
+	// Ids whose exit animation is in flight. They stay registered so a
+	// re-add can reverse the exit, but they're leaving — so they no
+	// longer hold a capacity slot, and an evict-then-add swap works in
+	// one tick.
+	const retiring = new Set<string>();
+
+	const panelAppearance = () => ({
+		theme: config.theme,
+		width: config.panelWidth,
+		maxHeight: config.panelMaxHeight
+	});
 
 	// One dismiss target and one group coordinate every bubble; created
 	// lazily so constructing a manager touches no DOM.
 	let zone: DismissZone | undefined;
 	let group: BubbleGroup | undefined;
 
+	// An emptied-out overlay tears down completely, so the next bubble
+	// enters like the first one did — fresh dock from the current config.
+	const teardownGroup = () => {
+		if (!zone) return;
+		group = undefined;
+		zone.destroy();
+		zone = undefined;
+		window.removeEventListener("resize", onResize);
+	};
+
 	const removeById = (id: string) => {
 		const bubble = bubbles.get(id);
 		if (!bubble) return;
 
-		bubble.cleanup();
+		bubble.panel?.destroy();
 		bubble.el.remove();
 		bubbles.delete(id);
+		retiring.delete(id);
 		group?.removeMember(id);
+		if (bubbles.size === 0) teardownGroup();
 	};
 
 	const dismissById = (id: string) => {
@@ -66,7 +91,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 					for (const id of [...bubbles.keys()]) dismissById(id);
 				}
 			},
-			{ side: config.side, vertical: config.vertical }
+			{ side: config.side, vertical: config.vertical, initialState: config.initialState }
 		);
 		window.addEventListener("resize", onResize);
 		return group;
@@ -80,13 +105,14 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			const existing = bubbles.get(options.id);
 			if (existing) {
 				if (group?.restoreMember(options.id)) {
+					retiring.delete(options.id);
 					existing.onDismiss = options.onDismiss;
 					if (options.label) existing.el.setAttribute("aria-label", options.label);
 				}
-				return;
+				return true;
 			}
 
-			if (bubbles.size >= config.maxBubbles) return;
+			if (bubbles.size - retiring.size >= config.maxBubbles) return false;
 			const bubbleGroup = ensureGroup();
 
 			// The bubble mounts before its panel so tab order flows bubble →
@@ -99,9 +125,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				? createPanel(() => bubbleGroup.attachPoint(), el, options.content, {
 						id: panelId,
 						label: options.label,
-						theme: config.theme,
-						width: config.panelWidth,
-						maxHeight: config.panelMaxHeight,
+						appearance: panelAppearance(),
 						onEscape: () => bubbleGroup.onEscape()
 					})
 				: undefined;
@@ -129,24 +153,41 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 
 			bubbles.set(options.id, {
 				el,
-				onDismiss: options.onDismiss,
-				cleanup: () => panel?.destroy()
+				panel,
+				onDismiss: options.onDismiss
 			});
+			return true;
 		},
 		remove(id) {
 			if (!bubbles.has(id)) return;
 
 			// Programmatic removal animates the bubble off-screen first.
-			if (group) group.retireMember(id, () => removeById(id));
-			else removeById(id);
+			if (group) {
+				retiring.add(id);
+				group.retireMember(id, () => removeById(id));
+			} else removeById(id);
+		},
+		configure(options) {
+			config = resolveOptions(options);
+
+			// Everything the library painted repaints in place; consumer
+			// icons and content are the consumer's to restyle.
+			zone?.setTheme(config.theme);
+			for (const bubble of bubbles.values()) {
+				setBubbleTheme(bubble.el, config.theme);
+				bubble.panel?.setAppearance(panelAppearance());
+			}
 		},
 		toggle() {
 			group?.toggle();
 		},
+		state() {
+			return group?.state() ?? config.initialState;
+		},
 		destroy() {
 			for (const id of [...bubbles.keys()]) removeById(id);
-			zone?.destroy();
-			window.removeEventListener("resize", onResize);
+			// Covers the never-added case; removeById tears down otherwise.
+			teardownGroup();
 		}
 	};
 };

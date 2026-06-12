@@ -23,6 +23,7 @@ const createXIcon = (stroke: string): SVGSVGElement => {
 export interface DismissTargetElement {
 	el: HTMLElement;
 	setCaptured: (captured: boolean) => void;
+	setTheme: (theme: BubbleTheme) => void;
 }
 
 export const createDismissTargetElement = (theme: BubbleTheme): DismissTargetElement => {
@@ -45,8 +46,6 @@ export const createDismissTargetElement = (theme: BubbleTheme): DismissTargetEle
 		height: `${DISMISS_TARGET_SIZE}px`,
 		flexShrink: "0",
 		borderRadius: "50%",
-		background: theme.dismissSurface,
-		border: `1px solid ${theme.dismissBorder}`,
 		boxSizing: "border-box",
 		display: "flex",
 		alignItems: "center",
@@ -54,7 +53,15 @@ export const createDismissTargetElement = (theme: BubbleTheme): DismissTargetEle
 		transition: "scale 150ms ease"
 	} satisfies Partial<CSSStyleDeclaration>);
 
-	surface.appendChild(createXIcon(theme.dismissIcon));
+	const xIcon = createXIcon(theme.dismissIcon);
+	const setTheme = (next: BubbleTheme) => {
+		surface.style.background = next.dismissSurface;
+		surface.style.border = `1px solid ${next.dismissBorder}`;
+		xIcon.setAttribute("stroke", next.dismissIcon);
+	};
+	setTheme(theme);
+
+	surface.appendChild(xIcon);
 	el.appendChild(surface);
 
 	// Purely a pointer-drag affordance; keyboard dismissal has its own
@@ -66,5 +73,5 @@ export const createDismissTargetElement = (theme: BubbleTheme): DismissTargetEle
 		surface.style.scale = captured ? `${CAPTURED_SCALE}` : "1";
 	};
 
-	return { el, setCaptured };
+	return { el, setCaptured, setTheme };
 };

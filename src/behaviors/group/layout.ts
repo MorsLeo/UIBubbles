@@ -1,6 +1,7 @@
 import { chooseSide, getSnappedSide, sideRestLeft } from "$src/behaviors/snap";
 import { EDGE_MARGIN, ROW_GAP, STACK_OFFSET } from "$src/constants";
 import type { BubbleSide, GlideTarget, GroupMember } from "$src/types";
+import { viewportHeight, viewportWidth } from "$src/viewport";
 
 /** Where the element already is — the no-op glide target. */
 export const restingPosition = (el: HTMLElement): GlideTarget => {
@@ -14,7 +15,7 @@ export const stackHalf = (count: number): number => ((count - 1) * STACK_OFFSET)
 /** Keeps the whole stack inside the vertical edge gaps. */
 export const clampCenter = (center: number, el: HTMLElement, count: number): number => {
 	const min = EDGE_MARGIN + el.offsetHeight / 2 + stackHalf(count);
-	const max = window.innerHeight - EDGE_MARGIN - el.offsetHeight / 2 - stackHalf(count);
+	const max = viewportHeight() - EDGE_MARGIN - el.offsetHeight / 2 - stackHalf(count);
 	return Math.min(Math.max(center, min), max);
 };
 
@@ -42,7 +43,7 @@ export const rowSlot = (member: GroupMember, row: GroupMember[]): GlideTarget =>
 	const width = member.el.offsetWidth;
 	const total = row.length * width + (row.length - 1) * ROW_GAP;
 	return {
-		left: (window.innerWidth - total) / 2 + index * (width + ROW_GAP),
+		left: (viewportWidth() - total) / 2 + index * (width + ROW_GAP),
 		top: EDGE_MARGIN
 	};
 };

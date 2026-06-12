@@ -49,8 +49,14 @@ export interface BubblesOptions {
 	panelWidth?: number;
 	/** Cap on the panel height in px; the viewport still caps it. */
 	panelMaxHeight?: number;
-	/** Most bubbles the manager will hold; add() ignores requests beyond it. Default 5. */
+	/** Most bubbles the manager will hold; add() returns false beyond it. Default 5. */
 	maxBubbles?: number;
+	/**
+	 * The state a fresh flock enters in. "open" drops every entering
+	 * bubble straight into its row slot — there is no dock-then-rise
+	 * transition. Default "docked".
+	 */
+	initialState?: BubblesState;
 }
 
 /** BubblesOptions with every default applied and the theme flattened to tokens. */
@@ -61,6 +67,7 @@ export interface ResolvedBubblesOptions {
 	panelWidth: number;
 	panelMaxHeight?: number;
 	maxBubbles: number;
+	initialState: BubblesState;
 }
 
 export interface BubbleOptions {
@@ -82,15 +89,27 @@ export interface BubbleOptions {
 
 export type BubbleSide = "left" | "right";
 
+/**
+ * The flock's two arrangements: "docked" stacks the bubbles on a screen
+ * edge; "open" spreads them into the top row with a panel showing.
+ */
+export type BubblesState = "docked" | "open";
+
 export type ArrowDirection = "left" | "right" | "up" | "down";
 
 /** Internal per-bubble record kept by the manager. */
 export interface BubbleInstance {
 	el: HTMLElement;
+	panel?: PanelController;
 	/** Consumer callback for user-initiated dismissal. */
 	onDismiss?: () => void;
-	/** Tears down listeners, panel, and any running animation. */
-	cleanup: () => void;
+}
+
+/** The repaintable parts of a panel's look. */
+export interface PanelAppearance {
+	theme: BubbleTheme;
+	width: number;
+	maxHeight?: number;
 }
 
 /** Shows and hides a bubble's expanded content panel. */
@@ -98,12 +117,35 @@ export interface PanelController {
 	/** Opens the panel (no-op if already open); it follows the group while visible. */
 	show(): void;
 	hide(): void;
+	/** Repaints colors and sizing in place, open or closed. */
+	setAppearance(appearance: PanelAppearance): void;
 	destroy(): void;
 }
 
 export interface BubbleManager {
-	add(options: BubbleOptions): void;
+	/**
+	 * True when the bubble is present after the call — newly added,
+	 * already mounted, or reclaimed mid-dismissal. False only when the
+	 * manager is at maxBubbles and the request was ignored.
+	 */
+	add(options: BubbleOptions): boolean;
 	remove(id: string): void;
+	/**
+	 * Applies new options to the live manager — no remounting, no
+	 * re-entry animations. Theme and colors repaint every bubble, panel,
+	 * and the dismiss target in place; panel sizing reflows open panels;
+	 * maxBubbles governs future add() calls (a lower cap never evicts
+	 * live bubbles). `side` and `vertical` describe where a fresh flock
+	 * docks, so they take effect once every bubble is gone and the next
+	 * one enters. Omitted options return to their defaults. Elements the
+	 * consumer supplied (icon, content) are theirs to restyle.
+	 */
+	configure(options: BubblesOptions): void;
+	/**
+	 * The flock's current state. With no bubbles mounted, the state the
+	 * next flock will enter in (the configured initialState).
+	 */
+	state(): BubblesState;
 	/**
 	 * Expands or collapses the group, moving keyboard focus with it.
 	 * Bind this to your own shortcut — the library ships no global
@@ -198,6 +240,8 @@ export interface BubbleGroup {
 	onDelete(id: string): void;
 	/** Expands or collapses the group, moving keyboard focus with it. */
 	toggle(): void;
+	/** The group's current arrangement. */
+	state(): BubblesState;
 	/** True when the group takes over the drag (docked trail drags). */
 	onDragStart(id: string, x: number, y: number, coarse: boolean): boolean;
 	onDragMove(x: number, y: number): void;
@@ -238,6 +282,8 @@ export interface CaptureFollower {
 export interface DismissZone {
 	/** Animates the target in from off-screen bottom (call at drag start). */
 	show(): void;
+	/** Repaints the target's colors in place. */
+	setTheme(theme: BubbleTheme): void;
 	/** Updates capture from the pointer position; true while captured. */
 	track(x: number, y: number): boolean;
 	captured(): boolean;

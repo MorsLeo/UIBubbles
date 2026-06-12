@@ -7,6 +7,7 @@ import { MAX_EDGE_DIP, REST_DISTANCE, REST_VELOCITY, RESTITUTION } from "$src/ph
 import { frictionDecay, projectDistance } from "$src/physics/friction";
 import { springStep } from "$src/physics/spring";
 import type { AxisState, Velocity } from "$src/types";
+import { viewportWidth } from "$src/viewport";
 
 /**
  * Simulates the bubble from release until it rests against a wall.
@@ -61,7 +62,7 @@ export const startFling = (
 	// a throw from inside gets its overshoot capped at the wall, while a
 	// bubble released off-screen first springs back in uncapped.
 	const minDipLeft = -MAX_EDGE_DIP;
-	const maxDipLeft = (): number => window.innerWidth - el.offsetWidth + MAX_EDGE_DIP;
+	const maxDipLeft = (): number => viewportWidth() - el.offsetWidth + MAX_EDGE_DIP;
 	let dipCapArmed = rect.left >= minDipLeft && rect.left <= maxDipLeft();
 
 	let x: AxisState = { position: rect.left, velocity: releaseVelocity.x };

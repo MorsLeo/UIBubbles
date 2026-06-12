@@ -13,6 +13,7 @@ describe("resolveOptions", () => {
 		expect(resolved.panelWidth).toBe(DEFAULT_PANEL_WIDTH);
 		expect(resolved.panelMaxHeight).toBeUndefined();
 		expect(resolved.maxBubbles).toBe(MAX_BUBBLES);
+		expect(resolved.initialState).toBe("docked");
 	});
 
 	it("passes explicit choices through", () => {
@@ -22,7 +23,8 @@ describe("resolveOptions", () => {
 			vertical: 0.25,
 			panelWidth: 420,
 			panelMaxHeight: 600,
-			maxBubbles: 3
+			maxBubbles: 3,
+			initialState: "open"
 		});
 
 		expect(resolved.theme).toEqual(bubbleThemes.light);
@@ -31,6 +33,7 @@ describe("resolveOptions", () => {
 		expect(resolved.panelWidth).toBe(420);
 		expect(resolved.panelMaxHeight).toBe(600);
 		expect(resolved.maxBubbles).toBe(3);
+		expect(resolved.initialState).toBe("open");
 	});
 
 	it("clamps vertical to the 0–1 range", () => {

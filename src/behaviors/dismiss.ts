@@ -3,6 +3,7 @@ import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { DISMISS_ATTRACT_RADIUS, DISMISS_CAPTURE_RADIUS } from "$src/constants";
 import { createDismissTargetElement, DISMISS_TARGET_SIZE } from "$src/elements/dismiss-target";
 import type { BubbleTheme, DismissZone, GlideTarget } from "$src/types";
+import { viewportHeight, viewportWidth } from "$src/viewport";
 
 /** Gap between the resting target and the bottom of the screen. */
 const BOTTOM_MARGIN = 24;
@@ -24,14 +25,14 @@ const ATTRACT_RADIUS_FRACTION = 0.75;
 
 // The radii read the viewport live: desktop keeps the stock feel, while
 // on a phone the capture and lean ranges shrink to stay proportionate.
-const minViewport = () => Math.min(window.innerWidth, window.innerHeight);
+const minViewport = () => Math.min(viewportWidth(), viewportHeight());
 const captureRadius = () =>
 	Math.min(DISMISS_CAPTURE_RADIUS, minViewport() * CAPTURE_RADIUS_FRACTION);
 const attractRadius = () =>
 	Math.min(DISMISS_ATTRACT_RADIUS, minViewport() * ATTRACT_RADIUS_FRACTION);
 
 export const createDismissZone = (theme: BubbleTheme): DismissZone => {
-	const { el, setCaptured } = createDismissTargetElement(theme);
+	const { el, setCaptured, setTheme } = createDismissTargetElement(theme);
 
 	let cancelGlide: (() => void) | undefined;
 	let cancelTransition: (() => void) | undefined;
@@ -43,11 +44,11 @@ export const createDismissZone = (theme: BubbleTheme): DismissZone => {
 	let lastX = 0;
 	let lastY = 0;
 
-	const restLeft = () => (window.innerWidth - DISMISS_TARGET_SIZE) / 2;
-	const restTop = () => window.innerHeight - DISMISS_TARGET_SIZE - BOTTOM_MARGIN;
+	const restLeft = () => (viewportWidth() - DISMISS_TARGET_SIZE) / 2;
+	const restTop = () => viewportHeight() - DISMISS_TARGET_SIZE - BOTTOM_MARGIN;
 	const restCenterX = () => restLeft() + DISMISS_TARGET_SIZE / 2;
 	const restCenterY = () => restTop() + DISMISS_TARGET_SIZE / 2;
-	const offScreenTop = () => window.innerHeight + DISMISS_TARGET_SIZE;
+	const offScreenTop = () => viewportHeight() + DISMISS_TARGET_SIZE;
 
 	const center = () => {
 		const rect = el.getBoundingClientRect();
@@ -215,6 +216,7 @@ export const createDismissZone = (theme: BubbleTheme): DismissZone => {
 
 	return {
 		show,
+		setTheme,
 		track,
 		captured: () => isCaptured,
 		dismissing: () => isDismissing,

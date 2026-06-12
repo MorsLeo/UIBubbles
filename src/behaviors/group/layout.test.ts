@@ -15,7 +15,7 @@ const fakeMember = (id: string, left = 0, top = 0, snappedSide?: BubbleSide): Gr
 });
 
 beforeAll(() => {
-	vi.stubGlobal("window", { innerWidth: 1000, innerHeight: 800 });
+	vi.stubGlobal("document", { documentElement: { clientWidth: 1000, clientHeight: 800 } });
 });
 
 afterAll(() => {
