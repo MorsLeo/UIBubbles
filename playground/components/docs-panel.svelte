@@ -23,7 +23,7 @@
 		<div class="flex min-w-0 flex-col">
 			<span class="truncate text-sm font-semibold">Docs</span>
 			<span class="truncate text-xs text-zinc-400 light:text-zinc-600">
-				The README, rendered live
+				The README
 			</span>
 		</div>
 	</header>
