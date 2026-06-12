@@ -16,6 +16,11 @@
 	const manager = createBubbles(toBubblesOptions(config));
 	let spawned = $state<Record<string, boolean>>({});
 
+	// Panel content elements by card id — the library exposes no "which
+	// panel is showing", so the chip checks visibility on the content
+	// it handed over.
+	const contents: Record<string, HTMLElement> = {};
+
 	// Spawn order, oldest first — the eviction queue when the cap is hit.
 	let order: string[] = [];
 
@@ -25,11 +30,12 @@
 	};
 
 	const spawn = (card: Card): boolean => {
+		contents[card.id] = mountInto(card.panel);
 		const added = manager.add({
 			id: card.id,
 			label: card.title,
 			icon: mountInto(BubbleGlyph, { icon: card.icon }),
-			content: mountInto(card.panel),
+			content: contents[card.id],
 			onDismiss: () => drop(card.id)
 		});
 		spawned[card.id] = added;
@@ -92,6 +98,30 @@
 	const dirty = $derived(configSnippet(config) !== "createBubbles();");
 	const reset = () => Object.assign(config, defaults);
 
+	// The chip points at the live config, so clicking it surfaces the
+	// settings panel: the bubble (re)joins under the usual cap rules and
+	// the group opens if docked.
+	const showSettings = () => {
+		const settings = cards.find((card) => card.id === "settings");
+		if (!settings) return;
+
+		if (spawned[settings.id]) {
+			// Already front and center — a reclaim would only blink the panel.
+			if (contents[settings.id]?.checkVisibility()) return;
+
+			// Remove-then-re-add reverses the exit before a frame paints — the
+			// documented reclaim path, which also makes the bubble the latest
+			// interaction and hands it the active panel.
+			manager.remove(settings.id);
+			manager.add({ id: settings.id, label: settings.title, onDismiss: () => drop(settings.id) });
+		} else {
+			while (order.length >= config.maxBubbles && evict());
+			if (!spawn(settings)) return;
+		}
+
+		if (manager.state() === "docked") manager.toggle();
+	};
+
 	// The favicon flips with the page: each variant is the mark on a
 	// rounded square in the theme's background/foreground pair.
 	$effect(() => {
@@ -118,10 +148,16 @@
 
 		{#if dirty}
 			<div
-				class="flex items-center gap-3 rounded-full border border-zinc-800 py-1.5 pr-3 pl-4 text-xs text-zinc-400 light:border-zinc-200 light:text-zinc-600"
+				class="flex items-center rounded-full border border-zinc-800 pr-3 text-xs text-zinc-400 light:border-zinc-200 light:text-zinc-600"
 			>
-				<span class="size-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
-				Custom config active
+				<button
+					type="button"
+					onclick={showSettings}
+					class="focus-ring flex cursor-pointer items-center gap-3 rounded-full py-1.5 pr-3 pl-4 transition-colors hover:text-zinc-200 light:hover:text-zinc-800"
+				>
+					<span class="size-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>
+					Custom config
+				</button>
 				<button
 					type="button"
 					onclick={reset}
