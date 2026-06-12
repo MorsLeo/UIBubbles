@@ -8,15 +8,17 @@ const HOVER_GROWTH = 4;
 /** Pixels removed from the visual diameter while pressed (~0.93x). */
 const ACTIVE_SHRINK = 4;
 
-/** Ring marking the active bubble while the row is open. It sits on the
- * surface and the active circle shrinks to make room, so circle + gap +
- * ring never exceed the bubble's normal footprint. */
+/**
+ * Ring marking the keyboard-focused bubble (:focus-visible). It sits on
+ * the surface and the circle shrinks to make room, so circle + gap +
+ * ring never exceed the bubble's normal footprint.
+ */
 const OUTLINE_WIDTH = 3;
 
-/** Gap between the surface edge and the active ring. */
+/** Gap between the surface edge and the focus ring. */
 const OUTLINE_GAP = 3;
 
-/** Extra diameter the ring needs — what the active circle gives up. */
+/** Extra diameter the ring needs — what the focused circle gives up. */
 const OUTLINE_SPAN = 2 * (OUTLINE_GAP + OUTLINE_WIDTH);
 
 /**
@@ -29,11 +31,7 @@ const SURFACE_SIZE = BUBBLE_SIZE + HOVER_GROWTH;
 /** Per-element visual state setters, so the group can scale members together. */
 const visualControls = new WeakMap<
 	HTMLElement,
-	{
-		setHovered(hovered: boolean): void;
-		setPressed(pressed: boolean): void;
-		setActive(active: boolean): void;
-	}
+	{ setHovered(hovered: boolean): void; setPressed(pressed: boolean): void }
 >();
 
 export const setBubbleHover = (el: HTMLElement, hovered: boolean): void => {
@@ -42,10 +40,6 @@ export const setBubbleHover = (el: HTMLElement, hovered: boolean): void => {
 
 export const setBubblePressed = (el: HTMLElement, pressed: boolean): void => {
 	visualControls.get(el)?.setPressed(pressed);
-};
-
-export const setBubbleActive = (el: HTMLElement, active: boolean): void => {
-	visualControls.get(el)?.setActive(active);
 };
 
 // Lucide "message-square" (playground/icons/chat.svg), inlined because
@@ -91,11 +85,17 @@ const createSurface = (icon?: HTMLElement): HTMLElement => {
 		pointerEvents: "none"
 	} satisfies Partial<CSSStyleDeclaration>);
 	surface.appendChild(icon ?? createChatIcon());
+
+	// The bubble names itself via aria-label; its visual innards (icon,
+	// ring, consumer markup) would only add noise to the tree.
+	surface.setAttribute("aria-hidden", "true");
 	return surface;
 };
 
-export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
+export const createBubbleElement = (icon?: HTMLElement, label?: string): HTMLElement => {
 	const el = document.createElement("div");
+
+	// The surface draws its own focus ring, so the native one stays off.
 	Object.assign(el.style, {
 		position: "fixed",
 		width: `${BUBBLE_SIZE}px`,
@@ -106,15 +106,20 @@ export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 		userSelect: "none",
 		display: "flex",
 		alignItems: "center",
-		justifyContent: "center"
+		justifyContent: "center",
+		outline: "none"
 	} satisfies Partial<CSSStyleDeclaration>);
+
+	el.setAttribute("role", "button");
+	el.tabIndex = 0;
+	el.setAttribute("aria-label", label ?? "Bubble");
 
 	const surface = createSurface(icon);
 	el.appendChild(surface);
 
 	let hovered = false;
 	let pressed = false;
-	let active = false;
+	let focused = false;
 	const syncSurfaceScale = () => {
 		const visualSize = pressed
 			? BUBBLE_SIZE - ACTIVE_SHRINK
@@ -122,11 +127,21 @@ export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 				? BUBBLE_SIZE + HOVER_GROWTH
 				: BUBBLE_SIZE;
 
-		// The active ring fits inside the normal footprint: the surface
+		// The focus ring fits inside the normal footprint: the surface
 		// shrinks so circle + gap + ring together span visualSize.
-		const span = active ? SURFACE_SIZE + OUTLINE_SPAN : SURFACE_SIZE;
+		const span = focused ? SURFACE_SIZE + OUTLINE_SPAN : SURFACE_SIZE;
 		surface.style.scale = `${visualSize / span}`;
 	};
+
+	// Ring only for keyboard focus: clicking focuses the bubble too (the
+	// drag layer restores that), but :focus-visible stays false there.
+	const syncFocusRing = (next: boolean) => {
+		focused = next;
+		surface.style.outlineColor = next ? "#ffffff" : "transparent";
+		syncSurfaceScale();
+	};
+	el.addEventListener("focus", () => syncFocusRing(el.matches(":focus-visible")));
+	el.addEventListener("blur", () => syncFocusRing(false));
 
 	visualControls.set(el, {
 		setHovered: (next) => {
@@ -135,11 +150,6 @@ export const createBubbleElement = (icon?: HTMLElement): HTMLElement => {
 		},
 		setPressed: (next) => {
 			pressed = next;
-			syncSurfaceScale();
-		},
-		setActive: (next) => {
-			active = next;
-			surface.style.outlineColor = next ? "#ffffff" : "transparent";
 			syncSurfaceScale();
 		}
 	});

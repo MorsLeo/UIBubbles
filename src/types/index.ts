@@ -1,6 +1,12 @@
 export interface BubbleOptions {
 	/** Unique id for this bubble. */
 	id: string;
+	/**
+	 * Accessible name for the bubble (and its panel), e.g. "Chat support".
+	 * The icon is opaque to assistive tech, so without a label the bubble
+	 * announces as a generic button.
+	 */
+	label?: string;
 	/** Content shown inside the collapsed bubble (e.g. an avatar). */
 	icon?: HTMLElement;
 	/** Content shown in the expanded panel. */
@@ -10,6 +16,8 @@ export interface BubbleOptions {
 }
 
 export type BubbleSide = "left" | "right";
+
+export type ArrowDirection = "left" | "right" | "up" | "down";
 
 /** Internal per-bubble record kept by the manager. */
 export interface BubbleInstance {
@@ -31,6 +39,12 @@ export interface PanelController {
 export interface BubbleManager {
 	add(options: BubbleOptions): void;
 	remove(id: string): void;
+	/**
+	 * Expands or collapses the group, moving keyboard focus with it.
+	 * Bind this to your own shortcut — the library ships no global
+	 * hotkey, so it can never collide with the host page's.
+	 */
+	toggle(): void;
 	destroy(): void;
 }
 
@@ -107,6 +121,18 @@ export interface BubbleGroup {
 	/** Reverses an in-flight retirement; true if the member was retiring. */
 	restoreMember(id: string): boolean;
 	onTap(id: string): void;
+	/**
+	 * Open row: left/right move focus. Docked: arrows reposition the
+	 * stack — up/down scoot it (all the way with `toEnd`), left/right
+	 * send it to the other edge.
+	 */
+	onArrow(id: string, direction: ArrowDirection, toEnd: boolean): void;
+	/** Collapses the open group and returns focus to the docked stack. */
+	onEscape(): void;
+	/** Dismisses an open-row bubble, moving focus to its neighbor. */
+	onDelete(id: string): void;
+	/** Expands or collapses the group, moving keyboard focus with it. */
+	toggle(): void;
 	/** True when the group takes over the drag (docked trail drags). */
 	onDragStart(id: string, x: number, y: number, coarse: boolean): boolean;
 	onDragMove(x: number, y: number): void;

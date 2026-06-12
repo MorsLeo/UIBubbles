@@ -15,7 +15,11 @@ export const makeDraggable = (
 	let cancelFling: (() => void) | undefined;
 
 	el.addEventListener("pointerdown", (event) => {
+		// preventDefault keeps the browser from starting text selection or
+		// native drags, but it also swallows click-to-focus — restore it so
+		// pointer and keyboard users share one focus model.
 		event.preventDefault();
+		el.focus({ preventScroll: true });
 
 		// Cancelling an in-flight fling freezes the bubble where it was
 		// grabbed — the simulation has already written its current position.

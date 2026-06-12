@@ -24,8 +24,10 @@ const ATTRACT_RADIUS_FRACTION = 0.75;
 // The radii read the viewport live: desktop keeps the stock feel, while
 // on a phone the capture and lean ranges shrink to stay proportionate.
 const minViewport = () => Math.min(window.innerWidth, window.innerHeight);
-const captureRadius = () => Math.min(DISMISS_CAPTURE_RADIUS, minViewport() * CAPTURE_RADIUS_FRACTION);
-const attractRadius = () => Math.min(DISMISS_ATTRACT_RADIUS, minViewport() * ATTRACT_RADIUS_FRACTION);
+const captureRadius = () =>
+	Math.min(DISMISS_CAPTURE_RADIUS, minViewport() * CAPTURE_RADIUS_FRACTION);
+const attractRadius = () =>
+	Math.min(DISMISS_ATTRACT_RADIUS, minViewport() * ATTRACT_RADIUS_FRACTION);
 
 export const createDismissZone = (): DismissZone => {
 	const { el, setCaptured } = createDismissTargetElement();

@@ -20,6 +20,7 @@
 		<input
 			type="text"
 			placeholder="Message"
+			aria-label="Message"
 			class="h-11 min-w-0 flex-1 rounded-md bg-zinc-800 px-4.5 text-sm text-white outline-none"
 		/>
 		<button

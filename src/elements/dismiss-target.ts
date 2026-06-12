@@ -55,6 +55,10 @@ export const createDismissTargetElement = (): DismissTargetElement => {
 
 	surface.appendChild(createXIcon());
 	el.appendChild(surface);
+
+	// Purely a pointer-drag affordance; keyboard dismissal has its own
+	// path, so assistive tech never needs to know this exists.
+	el.setAttribute("aria-hidden", "true");
 	document.body.appendChild(el);
 
 	const setCaptured = (captured: boolean) => {

@@ -1,6 +1,7 @@
 import { createDismissZone } from "$src/behaviors/dismiss";
 import { makeDraggable } from "$src/behaviors/drag";
 import { createBubbleGroup } from "$src/behaviors/group";
+import { makeKeyInteractive } from "$src/behaviors/keyboard";
 import { MAX_BUBBLES } from "$src/constants";
 import { createBubbleElement } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
@@ -59,17 +60,30 @@ export const createBubbles = (): BubbleManager => {
 			// element and panel live on, only the dismiss callback refreshes.
 			const existing = bubbles.get(options.id);
 			if (existing) {
-				if (group?.restoreMember(options.id)) existing.onDismiss = options.onDismiss;
+				if (group?.restoreMember(options.id)) {
+					existing.onDismiss = options.onDismiss;
+					if (options.label) existing.el.setAttribute("aria-label", options.label);
+				}
 				return;
 			}
 
 			if (bubbles.size >= MAX_BUBBLES) return;
 			const bubbleGroup = ensureGroup();
 
-			const el = createBubbleElement(options.icon);
+			// The bubble mounts before its panel so tab order flows bubble →
+			// panel content (createPanel appends to the body itself).
+			const el = createBubbleElement(options.icon, options.label);
+			document.body.appendChild(el);
+
+			const panelId = `bubble-panel-${options.id}`;
 			const panel = options.content
-				? createPanel(() => bubbleGroup.attachPoint(), el, options.content)
+				? createPanel(() => bubbleGroup.attachPoint(), el, options.content, {
+						id: panelId,
+						label: options.label,
+						onEscape: () => bubbleGroup.onEscape()
+					})
 				: undefined;
+			if (panel) el.setAttribute("aria-controls", panelId);
 
 			makeDraggable(
 				el,
@@ -82,8 +96,13 @@ export const createBubbles = (): BubbleManager => {
 				},
 				zone
 			);
+			makeKeyInteractive(el, {
+				onActivate: () => bubbleGroup.onTap(options.id),
+				onArrow: (direction, toEnd) => bubbleGroup.onArrow(options.id, direction, toEnd),
+				onEscape: () => bubbleGroup.onEscape(),
+				onDelete: () => bubbleGroup.onDelete(options.id)
+			});
 
-			document.body.appendChild(el);
 			bubbleGroup.addMember({ id: options.id, el, panel });
 
 			bubbles.set(options.id, {
@@ -98,6 +117,9 @@ export const createBubbles = (): BubbleManager => {
 			// Programmatic removal animates the bubble off-screen first.
 			if (group) group.retireMember(id, () => removeById(id));
 			else removeById(id);
+		},
+		toggle() {
+			group?.toggle();
 		},
 		destroy() {
 			for (const id of [...bubbles.keys()]) removeById(id);

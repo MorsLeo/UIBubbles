@@ -67,6 +67,7 @@
 
 		manager.add({
 			id: card.id,
+			label: card.title,
 			icon: mountInto(card.icon, { color: card.iconColor }),
 			content: mountInto(card.panel),
 			onDismiss: () => (spawned[card.id] = false)
@@ -80,7 +81,7 @@
 		<button
 			type="button"
 			onclick={() => toggle(card)}
-			class="flex w-full cursor-pointer flex-col items-start gap-1 rounded-xl border p-6 text-left transition-colors sm:w-48 {spawned[
+			class="flex w-full cursor-pointer flex-col items-start gap-1 rounded-xl border p-6 text-left transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 focus-visible:outline-solid sm:w-48 {spawned[
 				card.id
 			]
 				? 'border-zinc-600 bg-zinc-900'

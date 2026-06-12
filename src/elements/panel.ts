@@ -15,6 +15,9 @@ const HIDE_MS = 120;
 
 const SURFACE_COLOR = "#1c1c1e";
 
+/** Corner radius of the panel surface. */
+const SURFACE_RADIUS = 16;
+
 /** Side length of the rotated-square caret poking out of the panel top. */
 const CARET_SIZE = 12;
 
@@ -36,9 +39,25 @@ const CARET_INSET = 16;
 export const createPanel = (
 	attachPoint: () => { x: number; bottom: number } | undefined,
 	bubble: HTMLElement,
-	content: HTMLElement
+	content: HTMLElement,
+	options: { id: string; label?: string; onEscape: () => void }
 ): PanelController => {
 	const el = document.createElement("div");
+
+	// A non-modal dialog: the host page stays reachable behind it. The
+	// owning bubble points here via aria-controls.
+	el.id = options.id;
+	el.setAttribute("role", "dialog");
+	if (options.label) el.setAttribute("aria-label", options.label);
+
+	// Escape from anywhere inside the panel collapses the group, same as
+	// from the bubbles themselves (dialog convention).
+	el.addEventListener("keydown", (event) => {
+		if (event.key !== "Escape") return;
+		event.preventDefault();
+		options.onEscape();
+	});
+
 	Object.assign(el.style, {
 		position: "fixed",
 		display: "none",
@@ -68,7 +87,7 @@ export const createPanel = (
 		flexDirection: "column",
 		minHeight: "0",
 		overflow: "hidden",
-		borderRadius: "16px",
+		borderRadius: `${SURFACE_RADIUS}px`,
 		background: SURFACE_COLOR,
 		color: "#ffffff",
 		boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5)"

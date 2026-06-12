@@ -2,11 +2,11 @@ import { clampTop } from "$src/behaviors/clamp";
 import { startFling } from "$src/behaviors/fling";
 import { startGlide } from "$src/behaviors/glide";
 import { createGroupFeedback } from "$src/behaviors/group/feedback";
-import { dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout";
+import { clampCenter, dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout";
 import { createDragTrail } from "$src/behaviors/group/trail";
 import { chooseSide } from "$src/behaviors/snap";
 import { EDGE_MARGIN, Z_BUBBLE_TOP } from "$src/constants";
-import { setBubbleActive, setBubbleHover, setBubblePressed } from "$src/elements/bubble";
+import { setBubbleHover, setBubblePressed } from "$src/elements/bubble";
 import { TOUCH_CHASE_RATE } from "$src/physics/config";
 import type {
 	BubbleGroup,
@@ -22,6 +22,9 @@ const PANEL_APPEAR_DISTANCE = 100;
 
 /** Initial speed (px/s) for entrances and exits — fast launch, long spring tail. */
 const LAUNCH_SPEED = 2400;
+
+/** Vertical distance (px) the docked stack scoots per arrow-key press. */
+const DOCK_NUDGE = 80;
 
 /**
  * Coordinates every bubble. Docked, they're a stack distributed around
@@ -78,10 +81,24 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		for (const m of members) m.panel?.hide();
 	};
 
-	/** White ring on the active bubble — only while the row is open. */
-	const syncActiveRing = () => {
+	/**
+	 * Assistive-tech exposure mirroring the visual model: the docked
+	 * stack reads as one control (only the topmost member is focusable
+	 * and announced), the open row as one button per bubble. The whole
+	 * group is a single tab stop — the stack's topmost member, or the
+	 * row's active bubble — and arrow keys roam the rest of the row,
+	 * so tab order never depends on DOM insertion order.
+	 */
+	const syncMembers = () => {
+		const top = docked()[0];
 		for (const m of members) {
-			setBubbleActive(m.el, mode === "open" && m.id === activeId && !retiring.has(m.id));
+			const hidden = retiring.has(m.id) || (mode === "docked" && m !== top);
+			m.el.tabIndex = !hidden && (mode === "docked" || m.id === activeId) ? 0 : -1;
+			if (hidden) m.el.setAttribute("aria-hidden", "true");
+			else m.el.removeAttribute("aria-hidden");
+
+			// Each bubble controls its own panel; expanded only while showing.
+			m.el.setAttribute("aria-expanded", mode === "open" && m.id === activeId ? "true" : "false");
 		}
 	};
 
@@ -139,7 +156,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		// The stack flies apart into the row — group-wide hover ends with it.
 		feedback.setHover(false);
 		activeId ??= docked()[0]?.id;
-		syncActiveRing();
+		syncMembers();
 		settleMembers();
 	};
 
@@ -147,7 +164,6 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		mode = "docked";
 		centerY ??= window.innerHeight / 2;
 		hideAllPanels();
-		syncActiveRing();
 
 		// The active bubble leads the stack home: the most recently used
 		// member becomes topmost. Reordering happens only here — switching
@@ -155,13 +171,15 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		const i = activeId ? members.findIndex((m) => m.id === activeId) : -1;
 		if (i > 0) members.unshift(...members.splice(i, 1));
 
+		// After the reorder, so the new topmost is the one left exposed.
+		syncMembers();
 		settleMembers();
 	};
 
 	const switchTo = (member: GroupMember) => {
 		hideAllPanels();
 		activeId = member.id;
-		syncActiveRing();
+		syncMembers();
 		member.panel?.show();
 	};
 
@@ -170,7 +188,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 		if (activeId !== leavingId) return;
 
 		activeId = docked().find((m) => m.id !== leavingId)?.id;
-		syncActiveRing();
+		syncMembers();
 		const next = activeId ? byId(activeId) : undefined;
 		if (mode === "open" && next) next.panel?.show();
 	};
@@ -211,7 +229,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// the open row — and always becomes the active one.
 			members.unshift(member);
 			activeId = member.id;
-			syncActiveRing();
+			syncMembers();
 			const el = member.el;
 			feedback.attach(el);
 
@@ -282,6 +300,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				if (next) adoptDockFrom(next);
 			}
 			handOffActivePanel(id);
+			syncMembers();
 			if (!groupInFlight()) settleMembers();
 		},
 
@@ -303,6 +322,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// The panel hands over immediately (never shown for a departing
 			// bubble) and the rest of the group closes the gap during the exit.
 			handOffActivePanel(id);
+			syncMembers();
 
 			// A retiring drag leader hands the pointer to the next member;
 			// the trail re-chains behind it and the drag carries on. A
@@ -365,7 +385,7 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 			// Like a fresh add, the returning bubble is the latest interaction
 			// and takes the active panel back (revealed once it nears its slot).
 			activeId = id;
-			syncActiveRing();
+			syncMembers();
 			if (mode === "open") hideAllPanels();
 			centerY ??= window.innerHeight / 2;
 
@@ -419,6 +439,75 @@ export const createBubbleGroup = (zone: DismissZone, callbacks: GroupCallbacks):
 				return;
 			}
 			switchTo(member);
+		},
+
+		onArrow(id, direction, toEnd) {
+			if (mode === "open") {
+				if (direction === "up" || direction === "down") return;
+
+				// Row order is members order (newest leftmost), so stepping
+				// the array IS stepping visually; ends clamp rather than wrap.
+				const row = docked();
+				const i = row.findIndex((m) => m.id === id);
+				if (i === -1) return;
+				row[i + (direction === "left" ? -1 : 1)]?.el.focus();
+				return;
+			}
+
+			// Docked: arrows reposition the stack — up/down scoot it a short
+			// step, left/right send it across to the other edge. A live drag
+			// or throw keeps ownership of the position.
+			if (groupInFlight()) return;
+			const flock = docked();
+			const first = flock[0];
+			if (!first) return;
+
+			if (direction === "left" || direction === "right") {
+				if (side === direction) return;
+				side = direction;
+			} else {
+				// Ctrl rides the clamp to the extreme: ±Infinity resolves to
+				// the topmost/bottommost center the margins allow.
+				centerY ??= window.innerHeight / 2;
+				const step = direction === "up" ? -DOCK_NUDGE : DOCK_NUDGE;
+				centerY = clampCenter(toEnd ? step * Infinity : centerY + step, first.el, flock.length);
+			}
+			settleMembers();
+		},
+
+		onEscape() {
+			if (mode !== "open") return;
+			collapse();
+			// The collapse reorder makes the active bubble topmost — focus
+			// lands on it, the stack's single tab stop.
+			docked()[0]?.el.focus();
+		},
+
+		onDelete(id) {
+			if (mode !== "open" || retiring.has(id)) return;
+
+			// The neighbor is chosen before removal reshuffles the row:
+			// prefer the bubble to the right, falling back left at the end.
+			const row = docked();
+			const i = row.findIndex((m) => m.id === id);
+			if (i === -1) return;
+			const neighbor = row[i + 1] ?? row[i - 1];
+			callbacks.remove(id);
+			neighbor?.el.focus();
+		},
+
+		toggle() {
+			const flock = docked();
+			if (flock.length === 0) return;
+
+			if (mode === "docked") {
+				expand();
+				const active = activeId ? byId(activeId) : undefined;
+				(active ?? flock[0])?.el.focus();
+				return;
+			}
+			collapse();
+			docked()[0]?.el.focus();
 		},
 
 		onDragStart(id, x, y, coarse) {

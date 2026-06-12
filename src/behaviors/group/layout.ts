@@ -12,7 +12,7 @@ export const restingPosition = (el: HTMLElement): GlideTarget => {
 export const stackHalf = (count: number): number => ((count - 1) * STACK_OFFSET) / 2;
 
 /** Keeps the whole stack inside the vertical edge gaps. */
-const clampCenter = (center: number, el: HTMLElement, count: number) => {
+export const clampCenter = (center: number, el: HTMLElement, count: number): number => {
 	const min = EDGE_MARGIN + el.offsetHeight / 2 + stackHalf(count);
 	const max = window.innerHeight - EDGE_MARGIN - el.offsetHeight / 2 - stackHalf(count);
 	return Math.min(Math.max(center, min), max);
