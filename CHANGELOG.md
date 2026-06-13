@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-13
+
+### Added
+
+- `panelWidth` and `panelMaxHeight` now accept a CSS string — `"<n>px"` or `"<n>%"` — alongside the
+  existing px number, so a panel can size against the viewport (e.g. `panelMaxHeight: "80%"`). A
+  percentage resolves live, tracking viewport resizes, while the viewport still caps the result; an
+  invalid value throws at the call. Exports a `PanelLength` type for the accepted values
+
 ## [0.4.0] - 2026-06-13
 
 ### Added
