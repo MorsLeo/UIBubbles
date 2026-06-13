@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-12
+
 ### Added
 
 - `manager.active()` — the id of the bubble whose panel shows while open (and that leads the row when
@@ -20,6 +22,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `dismiss` event — fires the instant the user commits to dismissing a bubble (releases it on the
   target, or presses Delete), before the exit animation, so UI tracking the action stays snappy
   instead of lagging the fly-off; always followed by a matching `remove` with reason `"user"`
+
+### Changed
+
+- Dragging a bubble onto the dismiss target now closes the gap in the remaining bubbles and hands off
+  the active panel the instant you release, instead of after the dismissed bubble finishes animating
+  off-screen
 
 ## [0.2.0] - 2026-06-12
 
