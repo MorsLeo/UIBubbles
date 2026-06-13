@@ -5,6 +5,7 @@ import { makeKeyInteractive } from "$src/behaviors/keyboard";
 import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
 import { resolveOptions } from "$src/options";
+import { assertPanelLength } from "$src/panel-length";
 import { resolveTheme, systemThemeName } from "$src/theme";
 import type {
 	BubbleEvents,
@@ -27,7 +28,8 @@ export type {
 	BubblesOptions,
 	BubblesState,
 	BubbleTheme,
-	BubbleThemeName
+	BubbleThemeName,
+	PanelLength
 } from "$src/types";
 
 /**
@@ -219,6 +221,11 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 
 	return {
 		add(options) {
+			// Validate sizing up front so a bad override fails at the call,
+			// for both the reuse and the fresh-mount paths below.
+			assertPanelLength(options.panelWidth, "panelWidth");
+			assertPanelLength(options.panelMaxHeight, "panelMaxHeight");
+
 			// Re-adding a mounted bubble refreshes everything refreshable in
 			// place — the dismiss callback, the label, the panel sizing
 			// overrides — and reverses an exit still in flight, so rapid

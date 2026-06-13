@@ -8,7 +8,7 @@
 	import { effectiveTheme, toBubblesOptions } from "$playground/options";
 	import type { Card } from "$playground/types";
 	import { writeConfig } from "$playground/url";
-	import { createBubbles } from "$src/index";
+	import { createBubbles, type PanelLength } from "$src/index";
 	import { untrack } from "svelte";
 
 	// The demo boots expanded up top — but only the boot. The recurring
@@ -35,12 +35,18 @@
 	// they need no handler here.
 	manager.on("dismiss", ({ id }) => drop(id));
 
-	// The README panel gets a fixed width — prose needs the room — while
-	// the rest ride the configurable panel width.
+	// The README panel gets a fixed width — prose needs the room — and caps
+	// its height at 80% of the viewport so the long readme scrolls inside a
+	// contained panel; the "%" tracks resizes on its own. The rest ride the
+	// configurable panel width and the default height.
 	const DOCS_PANEL_WIDTH = 960;
+	const DOCS_PANEL_MAX_HEIGHT = "80%";
 
 	const panelWidthFor = (card: Card): number | undefined =>
 		card.id === "docs" ? DOCS_PANEL_WIDTH : undefined;
+
+	const panelMaxHeightFor = (card: Card): PanelLength | undefined =>
+		card.id === "docs" ? DOCS_PANEL_MAX_HEIGHT : undefined;
 
 	const spawn = (card: Card): boolean => {
 		const added = manager.add({
@@ -48,7 +54,8 @@
 			label: card.title,
 			icon: mountInto(BubbleGlyph, { icon: card.icon }),
 			content: mountInto(card.panel),
-			panelWidth: panelWidthFor(card)
+			panelWidth: panelWidthFor(card),
+			panelMaxHeight: panelMaxHeightFor(card)
 		});
 		spawned[card.id] = added;
 		if (added) order.push(card.id);

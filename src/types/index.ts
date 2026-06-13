@@ -31,6 +31,16 @@ export interface BubbleTheme {
 	dismissIcon: string;
 }
 
+/**
+ * A panel dimension: a bare number is CSS pixels, or a `"<n>px"` / `"<n>%"`
+ * string. The template-literal members give TypeScript callers
+ * compile-time checking; values arriving from untyped JavaScript are
+ * validated at the API boundary. Percentages resolve against the viewport
+ * live, so a `"%"` value tracks resizes without a reconfigure — while the
+ * viewport still caps the result either way.
+ */
+export type PanelLength = number | `${number}px` | `${number}%`;
+
 /** Manager-wide configuration; every field is optional. */
 export interface BubblesOptions {
 	/**
@@ -48,10 +58,10 @@ export interface BubblesOptions {
 	 * Default 0.5.
 	 */
 	vertical?: number;
-	/** Expanded panel width in px; the viewport still caps it. Default 480. */
-	panelWidth?: number;
-	/** Cap on the panel height in px; the viewport still caps it. */
-	panelMaxHeight?: number;
+	/** Expanded panel width in px or `"%"`; the viewport still caps it. Default 480. */
+	panelWidth?: PanelLength;
+	/** Cap on the panel height in px or `"%"`; the viewport still caps it. */
+	panelMaxHeight?: PanelLength;
 	/** Most bubbles the manager will hold; add() returns false beyond it. Default 5. */
 	maxBubbles?: number;
 	/**
@@ -78,8 +88,8 @@ export interface ResolvedBubblesOptions {
 	colors?: Partial<BubbleTheme>;
 	side: BubbleSide;
 	vertical: number;
-	panelWidth: number;
-	panelMaxHeight?: number;
+	panelWidth: PanelLength;
+	panelMaxHeight?: PanelLength;
 	maxBubbles: number;
 	ricochet: number;
 	initialState: BubblesState;
@@ -99,9 +109,9 @@ export interface BubbleOptions {
 	/** Content shown in the expanded panel. */
 	content?: HTMLElement;
 	/** Overrides the manager's `panelWidth` for this bubble's panel. */
-	panelWidth?: number;
+	panelWidth?: PanelLength;
 	/** Overrides the manager's `panelMaxHeight` for this bubble's panel. */
-	panelMaxHeight?: number;
+	panelMaxHeight?: PanelLength;
 	/** Fires after the user dismisses the bubble via the removal target. */
 	onDismiss?: () => void;
 }
@@ -169,8 +179,8 @@ export interface BubbleInstance {
 	el: HTMLElement;
 	panel?: PanelController;
 	/** Per-bubble panel sizing overrides; they win over the manager's. */
-	panelWidth?: number;
-	panelMaxHeight?: number;
+	panelWidth?: PanelLength;
+	panelMaxHeight?: PanelLength;
 	/** Consumer callback for user-initiated dismissal. */
 	onDismiss?: () => void;
 }
@@ -178,8 +188,8 @@ export interface BubbleInstance {
 /** The repaintable parts of a panel's look. */
 export interface PanelAppearance {
 	theme: BubbleTheme;
-	width: number;
-	maxHeight?: number;
+	width: PanelLength;
+	maxHeight?: PanelLength;
 }
 
 /** Shows and hides a bubble's expanded content panel. */

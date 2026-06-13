@@ -50,8 +50,8 @@ Creates a manager. Touches no DOM until the first `add()`, so it's safe to const
 | `colors`         | `Partial<BubbleTheme>`        | —          | Per-token color overrides applied on top of the preset. See [Theming](#theming).                                                                                                                                     |
 | `side`           | `"left" \| "right"`           | `"right"`  | Screen edge the docked stack starts on. Users can drag it anywhere afterward; with `configure()` it applies to the next fresh entry.                                                                                 |
 | `vertical`       | `number`                      | `0.5`      | Vertical center of the docked stack as a fraction of the viewport height (`0` top, `1` bottom), clamped to the screen margins.                                                                                       |
-| `panelWidth`     | `number`                      | `480`      | Expanded panel width in px. The viewport always caps it.                                                                                                                                                             |
-| `panelMaxHeight` | `number`                      | —          | Cap on the panel height in px. Without it the panel may use the full height under the bubble row.                                                                                                                    |
+| `panelWidth`     | `number \| string`            | `480`      | Expanded panel width — a number (px) or a `"<n>px"` / `"<n>%"` string. A `"%"` resolves against the viewport live (so it tracks resizes). The viewport always caps it.                                               |
+| `panelMaxHeight` | `number \| string`            | —          | Cap on the panel height — a number (px) or a `"<n>px"` / `"<n>%"` string, e.g. `"80%"`. Without it the panel may use the full height under the bubble row. The panel still shrinks to fit shorter content.           |
 | `maxBubbles`     | `number`                      | `5`        | Most bubbles the manager will hold; `add()` returns `false` beyond it.                                                                                                                                               |
 | `ricochet`       | `number`                      | `0.4`      | Fraction of speed a flung bubble keeps when it bounces off the top/bottom screen gap — `0` stops dead, `1` is lossless. Clamped to `0–1`.                                                                            |
 | `initialState`   | `"docked" \| "open"`          | `"docked"` | The state a fresh flock enters in. `"open"` drops every bubble straight into its row slot — never docked-then-risen.                                                                                                 |
@@ -72,15 +72,15 @@ const manager = createBubbles({
 
 Mounts a bubble. It flies in from the docked side and joins the group. Re-adding a mounted id refreshes `label`, `onDismiss`, and the panel sizing overrides in place (the element, icon, and content live on), and reverses an exit still animating after a dismissal. Returns `true` when the bubble is present after the call (newly added, already mounted, or reclaimed mid-dismissal) and `false` only when the manager is at `maxBubbles` and the request was ignored. Bubbles still animating out after `remove()` don't count toward the cap, so an evict-then-add swap works in one tick.
 
-| Option           | Type          | Description                                                                                                                     |
-| ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `id`             | `string`      | Unique id for this bubble (required).                                                                                           |
-| `label`          | `string`      | Accessible name for the bubble and its panel, e.g. `"Chat support"`. Without it the bubble announces as a generic button.       |
-| `icon`           | `HTMLElement` | Content shown inside the collapsed bubble (an avatar, an SVG, anything). Defaults to a chat glyph.                              |
-| `content`        | `HTMLElement` | Content shown in the expanded panel. Without it the bubble has no panel.                                                        |
-| `panelWidth`     | `number`      | Overrides the manager's `panelWidth` for this bubble's panel.                                                                   |
-| `panelMaxHeight` | `number`      | Overrides the manager's `panelMaxHeight` for this bubble's panel.                                                               |
-| `onDismiss`      | `() => void`  | Fires after the _user_ dismisses the bubble (drag onto the target, or Delete on the keyboard). Not fired by `manager.remove()`. |
+| Option           | Type               | Description                                                                                                                     |
+| ---------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | `string`           | Unique id for this bubble (required).                                                                                           |
+| `label`          | `string`           | Accessible name for the bubble and its panel, e.g. `"Chat support"`. Without it the bubble announces as a generic button.       |
+| `icon`           | `HTMLElement`      | Content shown inside the collapsed bubble (an avatar, an SVG, anything). Defaults to a chat glyph.                              |
+| `content`        | `HTMLElement`      | Content shown in the expanded panel. Without it the bubble has no panel.                                                        |
+| `panelWidth`     | `number \| string` | Overrides the manager's `panelWidth` for this bubble's panel (px number, or a `"<n>px"` / `"<n>%"` string).                     |
+| `panelMaxHeight` | `number \| string` | Overrides the manager's `panelMaxHeight` for this bubble's panel (px number, or a `"<n>px"` / `"<n>%"` string).                 |
+| `onDismiss`      | `() => void`       | Fires after the _user_ dismisses the bubble (drag onto the target, or Delete on the keyboard). Not fired by `manager.remove()`. |
 
 ### `manager.remove(id)`
 
