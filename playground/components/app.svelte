@@ -36,11 +36,11 @@
 	manager.on("dismiss", ({ id }) => drop(id));
 
 	// The README panel gets a fixed width — prose needs the room — and caps
-	// its height at 80% of the viewport so the long readme scrolls inside a
+	// its height at 70% of the viewport so the long readme scrolls inside a
 	// contained panel; the "%" tracks resizes on its own. The rest ride the
 	// configurable panel width and the default height.
 	const DOCS_PANEL_WIDTH = 960;
-	const DOCS_PANEL_MAX_HEIGHT = "80%";
+	const DOCS_PANEL_MAX_HEIGHT = "70%";
 
 	const panelWidthFor = (card: Card): number | undefined =>
 		card.id === "docs" ? DOCS_PANEL_WIDTH : undefined;
