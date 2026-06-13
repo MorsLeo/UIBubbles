@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* An extra-small breakpoint below Tailwind's stock `sm` (40rem), for the
+   bottom nav bar to shed its labels and go icon-only on narrow phones. */
+@theme {
+	--breakpoint-xs: 30rem;
+}
+
 /* Page-level light theme, toggled on <html> by the playground controls. */
 @custom-variant light (&:where(.light, .light *));
 

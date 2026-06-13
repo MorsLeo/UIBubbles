@@ -33,7 +33,7 @@
 				class="focus-ring flex cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white light:text-zinc-600 light:hover:bg-zinc-100 light:hover:text-zinc-900"
 			>
 				<card.icon size={18} />
-				<span>{card.title}</span>
+				<span class="hidden xs:inline">{card.title}</span>
 			</button>
 		{/each}
 	</div>
