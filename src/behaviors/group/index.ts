@@ -62,6 +62,21 @@ export const createBubbleGroup = (
 
 	const byId = (id: string) => members.find((m) => m.id === id);
 
+	// Every mode/active mutation funnels through these so the manager
+	// hears about each one; it diffs at delivery time, so redundant
+	// reports cost nothing.
+	const setMode = (next: BubblesState) => {
+		if (mode === next) return;
+		mode = next;
+		callbacks.onChange();
+	};
+
+	const setActive = (next: string | undefined) => {
+		if (activeId === next) return;
+		activeId = next;
+		callbacks.onChange();
+	};
+
 	/** Where the dock centers until an interaction teaches it otherwise. */
 	const defaultCenterY = () => viewportHeight() * config.vertical;
 
@@ -145,10 +160,11 @@ export const createBubbleGroup = (
 		});
 	};
 
-	const settleMembers = () => {
-		// Settling supersedes any in-flight throw.
-		flingLeaderId = undefined;
-		trail.cancelAll();
+	// Glides every settling member to its slot. Unlike settleMembers it
+	// leaves the trail and flingLeaderId untouched, so a member still
+	// riding the dismiss target off-screen (its exit driven by the trail)
+	// keeps flying while the rest of the flock reflows around its gap.
+	const glideMembersToSlots = () => {
 		syncZOrder();
 		for (const m of members) {
 			if (retiring.has(m.id) || m.id === rowDraggingId) continue;
@@ -161,6 +177,13 @@ export const createBubbleGroup = (
 				})
 			);
 		}
+	};
+
+	const settleMembers = () => {
+		// Settling supersedes any in-flight throw and ends every chase.
+		flingLeaderId = undefined;
+		trail.cancelAll();
+		glideMembersToSlots();
 	};
 
 	/** Restarts a member's settle glide with launch velocity (entrances). */
@@ -177,16 +200,16 @@ export const createBubbleGroup = (
 	};
 
 	const expand = () => {
-		mode = "open";
+		setMode("open");
 		// The stack flies apart into the row — group-wide hover ends with it.
 		feedback.setHover(false);
-		activeId ??= docked()[0]?.id;
+		if (activeId === undefined) setActive(docked()[0]?.id);
 		syncMembers();
 		settleMembers();
 	};
 
 	const collapse = () => {
-		mode = "docked";
+		setMode("docked");
 		centerY ??= defaultCenterY();
 		hideAllPanels();
 
@@ -203,7 +226,7 @@ export const createBubbleGroup = (
 
 	const switchTo = (member: GroupMember) => {
 		hideAllPanels();
-		activeId = member.id;
+		setActive(member.id);
 		syncMembers();
 		member.panel?.show();
 	};
@@ -212,7 +235,7 @@ export const createBubbleGroup = (
 	const handOffActivePanel = (leavingId: string) => {
 		if (activeId !== leavingId) return;
 
-		activeId = docked().find((m) => m.id !== leavingId)?.id;
+		setActive(docked().find((m) => m.id !== leavingId)?.id);
 		syncMembers();
 		const next = activeId ? byId(activeId) : undefined;
 		if (mode === "open" && next) next.panel?.show();
@@ -253,7 +276,7 @@ export const createBubbleGroup = (
 			// Newest member sits first — top of the docked stack, far left of
 			// the open row — and always becomes the active one.
 			members.unshift(member);
-			activeId = member.id;
+			setActive(member.id);
 			syncMembers();
 			const el = member.el;
 			feedback.attach(el);
@@ -322,8 +345,8 @@ export const createBubbleGroup = (
 			);
 
 			if (members.length === 0) {
-				mode = "docked";
-				activeId = undefined;
+				setMode("docked");
+				setActive(undefined);
 				flingLeaderId = undefined;
 				// The dock height dies with the group, so a reborn group
 				// re-centers as one — only the side is remembered. While any
@@ -434,7 +457,7 @@ export const createBubbleGroup = (
 
 			// Like a fresh add, the returning bubble is the latest interaction
 			// and takes the active panel back (revealed once it nears its slot).
-			activeId = id;
+			setActive(id);
 			syncMembers();
 			if (mode === "open") hideAllPanels();
 			centerY ??= defaultCenterY();
@@ -543,6 +566,7 @@ export const createBubbleGroup = (
 			const i = row.findIndex((m) => m.id === id);
 			if (i === -1) return;
 			const neighbor = row[i + 1] ?? row[i - 1];
+			callbacks.dismissed(id);
 			callbacks.remove(id);
 			neighbor?.el.focus();
 		},
@@ -562,6 +586,29 @@ export const createBubbleGroup = (
 		},
 
 		state: () => mode,
+
+		active: () => activeId,
+
+		activate(id) {
+			const member = byId(id);
+			if (!member || retiring.has(id)) return;
+			// A live drag owns the group; programmatic activation yields. A
+			// post-release fling is fine — settling supersedes it, like a tap.
+			if (groupDragging || rowDraggingId !== undefined) return;
+
+			if (mode === "docked") {
+				// Before expand, which only fills an empty active slot.
+				setActive(id);
+				expand();
+				member.el.focus();
+				return;
+			}
+
+			// Already front and center — don't steal focus for a no-op.
+			if (id === activeId) return;
+			switchTo(member);
+			member.el.focus();
+		},
 
 		onDragStart(id, x, y, coarse) {
 			const member = byId(id);
@@ -648,6 +695,31 @@ export const createBubbleGroup = (
 				})
 			);
 			return true;
+		},
+
+		onDismissCommit(id) {
+			// Announce the same set the post-exit removal will take: a docked
+			// drag dismisses the whole flock, a row bubble just itself.
+			if (groupDragging) {
+				// The whole flock is leaving — nothing remains to reflow.
+				for (const m of docked()) callbacks.dismissed(m.id);
+				return;
+			}
+			callbacks.dismissed(id);
+
+			// The bubble is committed but still riding the target off-screen
+			// (the trail drives that exit). Begin its retirement now so the
+			// rest of the row closes the gap and the next panel takes over
+			// immediately, rather than waiting out the off-screen animation;
+			// removeMember still does the final cleanup when the ride ends.
+			// glideMembersToSlots, not settleMembers, keeps the departing
+			// bubble's trail alive so it finishes its flight.
+			const member = byId(id);
+			if (!member || retiring.has(id)) return;
+			retiring.add(id);
+			handOffActivePanel(id);
+			syncMembers();
+			if (!groupInFlight()) glideMembersToSlots();
 		},
 
 		onDismiss(id) {

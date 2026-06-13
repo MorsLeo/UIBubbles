@@ -7,17 +7,22 @@ import { createPanel } from "$src/elements/panel";
 import { resolveOptions } from "$src/options";
 import { resolveTheme, systemThemeName } from "$src/theme";
 import type {
+	BubbleEvents,
 	BubbleGroup,
 	BubbleInstance,
 	BubbleManager,
+	BubbleRemoveReason,
 	BubblesOptions,
+	BubblesState,
 	DismissZone
 } from "$src/types";
 
 export { bubbleThemes } from "$src/theme";
 export type {
+	BubbleEvents,
 	BubbleManager,
 	BubbleOptions,
+	BubbleRemoveReason,
 	BubbleSide,
 	BubblesOptions,
 	BubblesState,
@@ -38,6 +43,56 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	// longer hold a capacity slot, and an evict-then-add swap works in
 	// one tick.
 	const retiring = new Set<string>();
+
+	// Event delivery is deferred to a microtask: handlers always observe
+	// a settled manager (never a half-mutated group), and a handler that
+	// mutates in response re-enters cleanly instead of corrupting the
+	// choreography that emitted. add/remove are occurrences and queue in
+	// order; statechange/activechange are diffed against the last
+	// delivered value at flush time, so a flicker that lands back where
+	// it started (a re-add reversing a removal, an emptying flock
+	// passing through "docked") coalesces to nothing.
+	const listeners = new Map<keyof BubbleEvents, Set<(detail: never) => void>>();
+	const occurrences: Array<
+		| { event: "add"; detail: BubbleEvents["add"] }
+		| { event: "dismiss"; detail: BubbleEvents["dismiss"] }
+		| { event: "remove"; detail: BubbleEvents["remove"] }
+	> = [];
+	let lastState: BubblesState = config.initialState;
+	let lastActive: string | undefined;
+	let flushQueued = false;
+
+	const currentState = (): BubblesState => group?.state() ?? config.initialState;
+
+	const deliver = <E extends keyof BubbleEvents>(event: E, detail: BubbleEvents[E]) => {
+		const handlers = listeners.get(event);
+		if (!handlers) return;
+		// Copied so a handler (un)subscribing mid-delivery can't skip or
+		// double-call its neighbors.
+		for (const handler of [...handlers]) handler(detail as never);
+	};
+
+	const flush = () => {
+		flushQueued = false;
+		for (const { event, detail } of occurrences.splice(0)) deliver(event, detail);
+
+		const state = currentState();
+		if (state !== lastState) {
+			lastState = state;
+			deliver("statechange", { state });
+		}
+		const active = group?.active();
+		if (active !== lastActive) {
+			lastActive = active;
+			deliver("activechange", { id: active });
+		}
+	};
+
+	const scheduleFlush = () => {
+		if (flushQueued) return;
+		flushQueued = true;
+		queueMicrotask(flush);
+	};
 
 	// "auto" reads the OS preference at paint time; the scheme listener
 	// below repaints when it flips, so the overlay tracks it live.
@@ -87,7 +142,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		scheme = undefined;
 	};
 
-	const removeById = (id: string) => {
+	const removeById = (id: string, reason: BubbleRemoveReason) => {
 		const bubble = bubbles.get(id);
 		if (!bubble) return;
 
@@ -97,11 +152,13 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		retiring.delete(id);
 		group?.removeMember(id);
 		if (bubbles.size === 0) teardownGroup();
+		occurrences.push({ event: "remove", detail: { id, reason } });
+		scheduleFlush();
 	};
 
 	const dismissById = (id: string) => {
 		const bubble = bubbles.get(id);
-		removeById(id);
+		removeById(id, "user");
 		bubble?.onDismiss?.();
 	};
 
@@ -117,7 +174,16 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				remove: dismissById,
 				removeAll: () => {
 					for (const id of [...bubbles.keys()]) dismissById(id);
-				}
+				},
+				// Commit-time announcement: the bubble is still mounted (its
+				// exit hasn't started), and a remove with reason "user" follows
+				// once it's gone.
+				dismissed: (id) => {
+					if (!bubbles.has(id)) return;
+					occurrences.push({ event: "dismiss", detail: { id } });
+					scheduleFlush();
+				},
+				onChange: scheduleFlush
 			},
 			{
 				side: config.side,
@@ -176,6 +242,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 					onDragStart: (x, y, coarse) => bubbleGroup.onDragStart(options.id, x, y, coarse),
 					onDragMove: (x, y) => bubbleGroup.onDragMove(x, y),
 					onDragEnd: (velocity) => bubbleGroup.onDragEnd(options.id, velocity),
+					onDismissCommit: () => bubbleGroup.onDismissCommit(options.id),
 					onDismiss: () => bubbleGroup.onDismiss(options.id)
 				},
 				zone,
@@ -197,6 +264,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				panelMaxHeight: options.panelMaxHeight,
 				onDismiss: options.onDismiss
 			});
+			occurrences.push({ event: "add", detail: { id: options.id } });
+			scheduleFlush();
 			return true;
 		},
 		remove(id) {
@@ -205,21 +274,37 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			// Programmatic removal animates the bubble off-screen first.
 			if (group) {
 				retiring.add(id);
-				group.retireMember(id, () => removeById(id));
-			} else removeById(id);
+				group.retireMember(id, () => removeById(id, "programmatic"));
+			} else removeById(id, "programmatic");
 		},
 		configure(options) {
 			config = resolveOptions(options);
 			repaint();
+			// While empty, state() reads the configured initialState — a
+			// changed one is a state change like any other.
+			scheduleFlush();
 		},
 		toggle() {
 			group?.toggle();
 		},
-		state() {
-			return group?.state() ?? config.initialState;
+		state: currentState,
+		active: () => group?.active(),
+		activate(id) {
+			group?.activate(id);
+		},
+		on(event, handler) {
+			let handlers = listeners.get(event);
+			if (!handlers) {
+				handlers = new Set();
+				listeners.set(event, handlers);
+			}
+			handlers.add(handler);
+			return () => {
+				handlers.delete(handler);
+			};
 		},
 		destroy() {
-			for (const id of [...bubbles.keys()]) removeById(id);
+			for (const id of [...bubbles.keys()]) removeById(id, "programmatic");
 			// Covers the never-added case; removeById tears down otherwise.
 			teardownGroup();
 		}

@@ -116,6 +116,54 @@ export type BubblesState = "docked" | "open";
 
 export type ArrowDirection = "left" | "right" | "up" | "down";
 
+/** Why a bubble left: the user dismissed it, or the consumer removed it. */
+export type BubbleRemoveReason = "user" | "programmatic";
+
+/**
+ * Everything the manager announces, with each event's payload.
+ *
+ * Delivery is deferred to a microtask after the triggering call, so
+ * handlers always observe the manager in a settled state. statechange
+ * and activechange report net changes — a value that flickers and
+ * returns within one tick (a re-add reversing a removal, an emptying
+ * flock passing through "docked") announces nothing.
+ */
+export interface BubbleEvents {
+	/**
+	 * state() changed. Semantic, not animated: it fires when the
+	 * arrangement changes, not when bubbles finish flying to it. While
+	 * no bubbles are mounted, state() reports the configured
+	 * initialState — the value this event tracks.
+	 */
+	statechange: { state: BubblesState };
+	/**
+	 * active() changed — the bubble whose panel shows while open, and
+	 * the one that leads when the group next opens. `id` is undefined
+	 * once no bubbles remain.
+	 */
+	activechange: { id: string | undefined };
+	/** A bubble was mounted by add(). Re-adds and reclaims don't fire it. */
+	add: { id: string };
+	/**
+	 * The user committed to dismissing a bubble — released it on the
+	 * removal target, or pressed Delete — fired the instant they commit,
+	 * before the exit animation. Only user gestures fire it (never
+	 * programmatic remove()/destroy()), and every dismiss is followed by
+	 * a remove with reason "user" for the same id once the bubble is
+	 * gone. Dragging the whole docked group onto the target fires one
+	 * dismiss per bubble. React here for snappy UI: the matching remove
+	 * lags behind the fly-off, this doesn't.
+	 */
+	dismiss: { id: string };
+	/**
+	 * A bubble finished leaving — fired once it's fully gone, after any
+	 * exit animation. A removal reversed by a re-add never fires it.
+	 * The bubble's own onDismiss callback runs synchronously at the
+	 * dismissal, so it precedes this event.
+	 */
+	remove: { id: string; reason: BubbleRemoveReason };
+}
+
 /** Internal per-bubble record kept by the manager. */
 export interface BubbleInstance {
 	el: HTMLElement;
@@ -171,6 +219,25 @@ export interface BubbleManager {
 	 */
 	state(): BubblesState;
 	/**
+	 * The active bubble's id — the one whose panel shows while the
+	 * group is open, and the one that leads when it next opens.
+	 * undefined with no bubbles mounted.
+	 */
+	active(): string | undefined;
+	/**
+	 * Makes the bubble active: expands a docked group on it, or
+	 * switches the open row's panel to it. Moves keyboard focus to the
+	 * bubble, like toggle(). No-op for unknown ids, bubbles mid-removal
+	 * (re-add() to reclaim those), an already-active bubble in an open
+	 * group, and while the user is dragging — a live drag owns the group.
+	 */
+	activate(id: string): void;
+	/**
+	 * Subscribes to a manager event; returns the unsubscribe function.
+	 * See BubbleEvents for the payloads and delivery timing.
+	 */
+	on<E extends keyof BubbleEvents>(event: E, handler: (detail: BubbleEvents[E]) => void): () => void;
+	/**
 	 * Expands or collapses the group, moving keyboard focus with it.
 	 * Bind this to your own shortcut — the library ships no global
 	 * hotkey, so it can never collide with the host page's.
@@ -220,7 +287,13 @@ export interface DragHooks {
 	onDragMove?: (x: number, y: number) => void;
 	/** Return true to take over the release and suppress the throw. */
 	onDragEnd?: (velocity: Velocity) => boolean;
-	/** Released while captured by the dismiss target. */
+	/**
+	 * Released while captured by the dismiss target — the commit. Fires
+	 * synchronously, before the bubble rides the target off-screen, so
+	 * consumers can react the instant the user lets go.
+	 */
+	onDismissCommit?: () => void;
+	/** The off-screen ride is done; the bubble can be removed now. */
 	onDismiss?: () => void;
 }
 
@@ -236,6 +309,19 @@ export interface GroupCallbacks {
 	remove(id: string): void;
 	/** Dismiss every bubble (group dragged onto the removal target). */
 	removeAll(): void;
+	/**
+	 * The user just committed to dismissing this bubble (capture release
+	 * or Delete), before the exit. Announce-only — removal still runs its
+	 * own path when the exit finishes.
+	 */
+	dismissed(id: string): void;
+	/**
+	 * The group's arrangement or active member changed. Carries no
+	 * payload: the manager diffs its own observable values at delivery
+	 * time, which also covers changes the group can't see (teardown
+	 * reverting state() to the configured initialState).
+	 */
+	onChange(): void;
 }
 
 /**
@@ -266,10 +352,16 @@ export interface BubbleGroup {
 	toggle(): void;
 	/** The group's current arrangement. */
 	state(): BubblesState;
+	/** The active member's id — the shown panel when open, the next leader when docked. */
+	active(): string | undefined;
+	/** Makes the member active: expands a docked group on it, switches an open row to it. */
+	activate(id: string): void;
 	/** True when the group takes over the drag (docked trail drags). */
 	onDragStart(id: string, x: number, y: number, coarse: boolean): boolean;
 	onDragMove(x: number, y: number): void;
 	onDragEnd(id: string, velocity: Velocity): boolean;
+	/** The user committed to dismissing (capture release): announce the leaving set. */
+	onDismissCommit(id: string): void;
 	onDismiss(id: string): void;
 	handleResize(): void;
 }

@@ -101,6 +101,10 @@ export const makeDraggable = (
 
 			if (dragging) {
 				if (dismissZone?.captured()) {
+					// Commit fires now, before the ride off-screen — consumers
+					// hear the dismissal the instant the user lets go.
+					hooks.onDismissCommit?.();
+
 					// The capture hold keeps running, so the bubble rides the
 					// target off-screen; removal waits until the pair is gone.
 					dismissZone.hide(() => {

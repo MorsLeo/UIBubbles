@@ -107,6 +107,42 @@ Expands or collapses the group, moving keyboard focus with it. Bind this to your
 
 The flock's current arrangement: `"docked"` (stacked on a screen edge) or `"open"` (the top row, panel showing). With no bubbles mounted, returns the state the next flock will enter in — the configured `initialState`. Useful for host chrome that reacts to the overlay, e.g. dimming the page while the row is open.
 
+### `manager.active()`
+
+The id of the active bubble — the one whose panel shows while the group is open, and the one that leads the row when it next opens. The newest-added bubble is always active; collapsing the open row makes the most recently used bubble active. Returns `undefined` while no bubbles are mounted. "Is this bubble's panel showing?" is `manager.state() === "open" && manager.active() === id`.
+
+### `manager.activate(id)`
+
+Makes a bubble active and brings its panel forward: expands a docked group on it, or switches the open row's panel to it. Moves keyboard focus to the bubble, like `toggle()`. No-op for an unknown id, a bubble mid-removal (re-`add()` to reclaim those), the already-active bubble of an open group, and while the user is dragging — a live drag owns the group.
+
+```ts
+// Surface a particular bubble from your own UI:
+showSupportButton.addEventListener("click", () => manager.activate("chat"));
+```
+
+### `manager.on(event, handler)`
+
+Subscribes to a manager event; returns an unsubscribe function. Handlers fire on a microtask after the change, so they always observe a settled manager — and a handler that calls back into the manager re-enters cleanly.
+
+```ts
+const off = manager.on("activechange", ({ id }) => {
+	highlightTab(id); // id is undefined once the last bubble is gone
+});
+// later: off();
+```
+
+| Event          | Payload                                            | Fires when                                                                                                                                                                                                          |
+| -------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `statechange`  | `{ state: "docked" \| "open" }`                    | The arrangement changes. Semantic, not animated — it fires when the group changes state, not when bubbles finish flying there. While empty, tracks the configured `initialState`, so a changed one fires too.        |
+| `activechange` | `{ id: string \| undefined }`                      | The active bubble changes (`undefined` once none remain).                                                                                                                                                          |
+| `add`          | `{ id: string }`                                   | A bubble is mounted by `add()`. Re-adds and reclaims (reversing an in-flight removal) don't fire it.                                                                                                                |
+| `dismiss`      | `{ id: string }`                                   | The user **commits** to dismissing a bubble — releases it on the target, or presses Delete — fired the instant they commit, **before** the exit animation. User gestures only; dragging the whole group onto the target fires one `dismiss` per bubble. Every `dismiss` is followed by a matching `remove` (`reason: "user"`). |
+| `remove`       | `{ id: string; reason: "user" \| "programmatic" }` | A bubble finishes leaving, after any exit animation — `"user"` for a dismissal (drag onto the target or Delete), `"programmatic"` for `manager.remove()`/`destroy()`. A removal a re-`add()` reverses never fires it. |
+
+Reach for `dismiss` over `remove` when UI should track a committed user action snappily — un-highlighting a control, say — since `remove` lags behind the fly-off animation; reach for `remove` when you need the bubble to actually be gone (teardown, freeing a slot).
+
+Changes are coalesced per microtask: `statechange` and `activechange` report net changes against the last value delivered, so a value that flickers and returns within one tick announces nothing. `add`, `dismiss`, and `remove` are occurrences, delivered in order. The per-bubble `onDismiss` callback still fires synchronously at the dismissal, between the two events.
+
 ### `manager.destroy()`
 
 Removes every bubble, panel, and listener immediately. Call when the host view unmounts.

@@ -19,11 +19,6 @@
 	const manager = createBubbles({ ...toBubblesOptions(config), initialState: "open" });
 	let spawned = $state<Record<string, boolean>>({});
 
-	// Panel content elements by card id — the library exposes no "which
-	// panel is showing", so the chip checks visibility on the content
-	// it handed over.
-	const contents: Record<string, HTMLElement> = {};
-
 	// Spawn order, oldest first — the eviction queue when the cap is hit.
 	let order: string[] = [];
 
@@ -31,6 +26,16 @@
 		spawned[id] = false;
 		order = order.filter((other) => other !== id);
 	};
+
+	// A user dismissal (drag to the target, or Delete) is the one removal the
+	// demo doesn't initiate, so it learns about it through the manager rather
+	// than an onDismiss wired onto every bubble. dismiss fires the instant the
+	// user commits — before the bubble finishes flying off — so the card
+	// un-highlights right away instead of waiting out the exit (the later
+	// remove event lags behind that animation). Programmatic removals — a card
+	// toggled off, an eviction — drop() synchronously at the call site, so
+	// they need no handler here.
+	manager.on("dismiss", ({ id }) => drop(id));
 
 	// The README panel gets a fixed width — prose needs the room — while
 	// the rest ride the configurable panel width.
@@ -40,14 +45,12 @@
 		card.id === "docs" ? DOCS_PANEL_WIDTH : undefined;
 
 	const spawn = (card: Card): boolean => {
-		contents[card.id] = mountInto(card.panel);
 		const added = manager.add({
 			id: card.id,
 			label: card.title,
 			icon: mountInto(BubbleGlyph, { icon: card.icon }),
-			content: contents[card.id],
-			panelWidth: panelWidthFor(card),
-			onDismiss: () => drop(card.id)
+			content: mountInto(card.panel),
+			panelWidth: panelWidthFor(card)
 		});
 		spawned[card.id] = added;
 		if (added) order.push(card.id);
@@ -111,33 +114,19 @@
 	const dirty = $derived(configSnippet(config) !== configSnippet(defaults));
 	const reset = () => Object.assign(config, defaults);
 
-	// The chip points at the live config, so clicking it surfaces the
-	// settings panel: the bubble (re)joins under the usual cap rules and
-	// the group opens if docked.
+	// The chip surfaces the settings panel. Spawn the bubble if it's gone
+	// (under the usual cap rules), then activate() brings its panel to the
+	// front: it expands a docked group on settings, switches an open row to
+	// it, or — if settings is already the shown panel — does nothing.
 	const showSettings = () => {
 		const settings = cards.find((card) => card.id === "settings");
 		if (!settings) return;
 
-		if (spawned[settings.id]) {
-			// Already front and center — a reclaim would only blink the panel.
-			if (contents[settings.id]?.checkVisibility()) return;
-
-			// Remove-then-re-add reverses the exit before a frame paints — the
-			// documented reclaim path, which also makes the bubble the latest
-			// interaction and hands it the active panel.
-			manager.remove(settings.id);
-			manager.add({
-				id: settings.id,
-				label: settings.title,
-				panelWidth: panelWidthFor(settings),
-				onDismiss: () => drop(settings.id)
-			});
-		} else {
+		if (!spawned[settings.id]) {
 			while (order.length >= config.maxBubbles && evict());
 			if (!spawn(settings)) return;
 		}
-
-		if (manager.state() === "docked") manager.toggle();
+		manager.activate(settings.id);
 	};
 
 	// The favicon flips with the page: each variant is the mark on a
