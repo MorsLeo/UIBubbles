@@ -1,6 +1,7 @@
 import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { EDGE_MARGIN, Z_PANEL } from "$src/constants";
 import { BUBBLE_SIZE } from "$src/elements/bubble";
+import { toCssLength } from "$src/panel-length";
 import type { PanelAppearance, PanelController } from "$src/types";
 import { viewportWidth } from "$src/viewport";
 
@@ -95,14 +96,18 @@ export const createPanel = (
 	// All colors and sizing live here so configure() can repaint in place.
 	// The viewport always caps the consumer's size choices: width inside
 	// the side margins, height inside the gap under a top-docked bubble.
-	// Percentages, not vw/vh — the panel is fixed, so % resolves against
-	// the scrollbar-free viewport while vw/vh include page scrollbars.
+	// A consumer dimension is a px number or a "%" string (toCssLength
+	// formats either); folding it into min() with the viewport-relative
+	// cap clamps both, and a "%" leg re-resolves live as the window
+	// resizes. The clamp itself stays in %, not vw/vh — the panel is
+	// fixed, so % resolves against the scrollbar-free viewport while vw/vh
+	// would include page scrollbars.
 	const setAppearance = ({ theme, width, maxHeight }: PanelAppearance) => {
-		el.style.width = `min(${width}px, calc(100% - ${EDGE_MARGIN * 2}px))`;
+		el.style.width = `min(${toCssLength(width)}, calc(100% - ${EDGE_MARGIN * 2}px))`;
 		el.style.maxHeight =
 			maxHeight === undefined
 				? `calc(100% - ${PANEL_TOP + EDGE_MARGIN}px)`
-				: `min(${maxHeight}px, calc(100% - ${PANEL_TOP + EDGE_MARGIN}px))`;
+				: `min(${toCssLength(maxHeight)}, calc(100% - ${PANEL_TOP + EDGE_MARGIN}px))`;
 		caret.style.background = theme.panelSurface;
 		surface.style.background = theme.panelSurface;
 		surface.style.color = theme.panelText;

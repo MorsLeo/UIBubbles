@@ -42,6 +42,17 @@ describe("resolveOptions", () => {
 		expect(resolved.initialState).toBe("open");
 	});
 
+	it("passes percentage panel dimensions through unchanged", () => {
+		const resolved = resolveOptions({ panelWidth: "90%", panelMaxHeight: "80%" });
+		expect(resolved.panelWidth).toBe("90%");
+		expect(resolved.panelMaxHeight).toBe("80%");
+	});
+
+	it("rejects an unsupported panel dimension, naming the option", () => {
+		expect(() => resolveOptions({ panelMaxHeight: "80vh" as never })).toThrow(/panelMaxHeight/);
+		expect(() => resolveOptions({ panelWidth: -10 as never })).toThrow(/panelWidth/);
+	});
+
 	it("clamps ricochet to the 0–1 range", () => {
 		expect(resolveOptions({ ricochet: -0.5 }).ricochet).toBe(0);
 		expect(resolveOptions({ ricochet: 2 }).ricochet).toBe(1);
