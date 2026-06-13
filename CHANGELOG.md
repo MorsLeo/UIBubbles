@@ -7,6 +7,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-13
+
+### Added
+
+- `manager.registerTrigger(el)` — mark one of your own controls (a launcher button, a menu item) as a
+  trigger so a press on it is exempt from tap-away; returns a function that unregisters it. Without it,
+  a control that opens or switches a bubble would collapse the flock a beat before your handler reopens
+  it
+- Tap-away to collapse — pressing anywhere outside the open row now collapses the group home, alongside
+  tapping the active bubble and pressing Escape. The press is only a signal: it's never consumed, so
+  the page behind the non-modal panel stays interactive
+
+### Changed
+
+- The focus ring now marks the focused bubble whatever moved focus there — mouse, keyboard, or a
+  programmatic `activate()` — instead of keyboard focus (`:focus-visible`) only; the focused bubble is
+  the live keyboard target, so it's always marked. Focus restores on tap rather than on grab, so
+  dragging or flinging the group no longer rings a bubble
+- `manager.activate(id)` now moves keyboard focus to the target when it switches the open row's panel,
+  matching its documented contract (previously focus only moved when expanding a docked group)
+
 ## [0.3.0] - 2026-06-12
 
 ### Added
