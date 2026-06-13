@@ -15,7 +15,7 @@ export interface BubbleTheme {
 	bubbleIcon: string;
 	/** Drop shadow under each bubble. */
 	bubbleShadow: string;
-	/** Ring marking the keyboard-focused bubble. */
+	/** Ring marking the focused bubble. */
 	focusRing: string;
 	/** Fill of the expanded panel and its caret. */
 	panelSurface: string;
@@ -189,6 +189,8 @@ export interface PanelController {
 	hide(): void;
 	/** Repaints colors and sizing in place, open or closed. */
 	setAppearance(appearance: PanelAppearance): void;
+	/** True if the node is the panel or lives inside it — for outside-click tests. */
+	contains(node: Node | null): boolean;
 	destroy(): void;
 }
 
@@ -233,10 +235,22 @@ export interface BubbleManager {
 	 */
 	activate(id: string): void;
 	/**
+	 * Marks an element as a trigger — one of your own controls that opens
+	 * or switches bubbles (a launcher button, a menu item). A press inside
+	 * it is exempt from tap-away, so the press can't collapse the flock a
+	 * fraction before your handler reopens it. Returns a function that
+	 * unregisters the element. The library's own bubbles are always exempt;
+	 * this is only for controls living outside the flock.
+	 */
+	registerTrigger(el: HTMLElement): () => void;
+	/**
 	 * Subscribes to a manager event; returns the unsubscribe function.
 	 * See BubbleEvents for the payloads and delivery timing.
 	 */
-	on<E extends keyof BubbleEvents>(event: E, handler: (detail: BubbleEvents[E]) => void): () => void;
+	on<E extends keyof BubbleEvents>(
+		event: E,
+		handler: (detail: BubbleEvents[E]) => void
+	): () => void;
 	/**
 	 * Expands or collapses the group, moving keyboard focus with it.
 	 * Bind this to your own shortcut — the library ships no global
@@ -346,6 +360,12 @@ export interface BubbleGroup {
 	onArrow(id: string, direction: ArrowDirection, toEnd: boolean): void;
 	/** Collapses the open group and returns focus to the docked stack. */
 	onEscape(): void;
+	/**
+	 * A pointerdown landing outside the open flock and its panel collapses
+	 * the group (tap-away). A no-op while docked or when the press is on a
+	 * bubble or inside the panel. Never consumes the event.
+	 */
+	onOutsidePointer(target: EventTarget | null): void;
 	/** Dismisses an open-row bubble, moving focus to its neighbor. */
 	onDelete(id: string): void;
 	/** Expands or collapses the group, moving keyboard focus with it. */

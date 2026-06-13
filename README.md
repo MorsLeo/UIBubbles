@@ -120,6 +120,16 @@ Makes a bubble active and brings its panel forward: expands a docked group on it
 showSupportButton.addEventListener("click", () => manager.activate("chat"));
 ```
 
+### `manager.registerTrigger(el)`
+
+Marks one of your own controls — a launcher button, a menu item — as a trigger, and returns a function that unregisters it. Pressing outside the open row collapses the flock; without this, a press on a button that itself opens or switches a bubble would collapse it a beat before your handler reopens it. Registering the element makes that press exempt. The library's own bubbles are always exempt — this is only for controls that live outside the flock.
+
+```ts
+const off = manager.registerTrigger(showSupportButton);
+showSupportButton.addEventListener("click", () => manager.activate("chat"));
+// later: off();
+```
+
 ### `manager.on(event, handler)`
 
 Subscribes to a manager event; returns an unsubscribe function. Handlers fire on a microtask after the change, so they always observe a settled manager — and a handler that calls back into the manager re-enters cleanly.
@@ -131,13 +141,13 @@ const off = manager.on("activechange", ({ id }) => {
 // later: off();
 ```
 
-| Event          | Payload                                            | Fires when                                                                                                                                                                                                          |
-| -------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `statechange`  | `{ state: "docked" \| "open" }`                    | The arrangement changes. Semantic, not animated — it fires when the group changes state, not when bubbles finish flying there. While empty, tracks the configured `initialState`, so a changed one fires too.        |
-| `activechange` | `{ id: string \| undefined }`                      | The active bubble changes (`undefined` once none remain).                                                                                                                                                          |
-| `add`          | `{ id: string }`                                   | A bubble is mounted by `add()`. Re-adds and reclaims (reversing an in-flight removal) don't fire it.                                                                                                                |
+| Event          | Payload                                            | Fires when                                                                                                                                                                                                                                                                                                                     |
+| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `statechange`  | `{ state: "docked" \| "open" }`                    | The arrangement changes. Semantic, not animated — it fires when the group changes state, not when bubbles finish flying there. While empty, tracks the configured `initialState`, so a changed one fires too.                                                                                                                  |
+| `activechange` | `{ id: string \| undefined }`                      | The active bubble changes (`undefined` once none remain).                                                                                                                                                                                                                                                                      |
+| `add`          | `{ id: string }`                                   | A bubble is mounted by `add()`. Re-adds and reclaims (reversing an in-flight removal) don't fire it.                                                                                                                                                                                                                           |
 | `dismiss`      | `{ id: string }`                                   | The user **commits** to dismissing a bubble — releases it on the target, or presses Delete — fired the instant they commit, **before** the exit animation. User gestures only; dragging the whole group onto the target fires one `dismiss` per bubble. Every `dismiss` is followed by a matching `remove` (`reason: "user"`). |
-| `remove`       | `{ id: string; reason: "user" \| "programmatic" }` | A bubble finishes leaving, after any exit animation — `"user"` for a dismissal (drag onto the target or Delete), `"programmatic"` for `manager.remove()`/`destroy()`. A removal a re-`add()` reverses never fires it. |
+| `remove`       | `{ id: string; reason: "user" \| "programmatic" }` | A bubble finishes leaving, after any exit animation — `"user"` for a dismissal (drag onto the target or Delete), `"programmatic"` for `manager.remove()`/`destroy()`. A removal a re-`add()` reverses never fires it.                                                                                                          |
 
 Reach for `dismiss` over `remove` when UI should track a committed user action snappily — un-highlighting a control, say — since `remove` lags behind the fly-off animation; reach for `remove` when you need the bubble to actually be gone (teardown, freeing a slot).
 
@@ -170,7 +180,7 @@ Every token the library paints with:
 | `bubbleSurface`  | Fill of the collapsed bubble circle                                  |
 | `bubbleIcon`     | Stroke of the built-in chat glyph (only when a bubble has no `icon`) |
 | `bubbleShadow`   | Drop shadow under each bubble                                        |
-| `focusRing`      | Ring marking the keyboard-focused bubble                             |
+| `focusRing`      | Ring marking the focused bubble                                      |
 | `panelSurface`   | Fill of the expanded panel and its caret                             |
 | `panelText`      | Default text color inside the panel                                  |
 | `panelShadow`    | Drop shadow under the panel                                          |
@@ -216,7 +226,7 @@ The panel surface handles clipping, rounding, and the height constraint; give yo
 ## Behavior
 
 - **Docked**, bubbles stack on a screen edge and move as one: drag any of them and the rest chase in a trail, fling the group and it coasts to an edge, drop it on the dismiss target to dismiss them all.
-- **Tap** the stack and it expands into a centered row along the top, with the active bubble's panel below. Tap another bubble to switch panels; tap the active bubble (or press Escape) to collapse home.
+- **Tap** the stack and it expands into a centered row along the top, with the active bubble's panel below. Tap another bubble to switch panels; tap the active bubble, press anywhere outside the row, or press Escape to collapse home. (An outside press only collapses — it never consumes the click, so the page behind stays interactive.)
 - **Dismiss target** appears at the bottom of the screen during any drag; it leans toward the cursor and magnetically captures the bubble when close.
 - The newest bubble always becomes the active one; collapsing reorders the most recently used bubble to the top of the stack.
 

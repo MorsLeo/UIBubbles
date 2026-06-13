@@ -201,5 +201,5 @@ export const createPanel = (
 		el.remove();
 	};
 
-	return { show, hide, setAppearance, destroy };
+	return { show, hide, setAppearance, contains: (node) => el.contains(node), destroy };
 };

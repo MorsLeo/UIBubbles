@@ -18,10 +18,10 @@ export const makeDraggable = (
 
 	el.addEventListener("pointerdown", (event) => {
 		// preventDefault keeps the browser from starting text selection or
-		// native drags, but it also swallows click-to-focus — restore it so
-		// pointer and keyboard users share one focus model.
+		// native drags. It also swallows click-to-focus — restored on tap
+		// below, not here: focusing on pointerdown would ring every grab,
+		// including a group drag or fling that opens nothing.
 		event.preventDefault();
-		el.focus({ preventScroll: true });
 
 		// Cancelling an in-flight fling freezes the bubble where it was
 		// grabbed — the simulation has already written its current position.
@@ -125,6 +125,10 @@ export const makeDraggable = (
 					}
 				}
 			} else if (e.type === "pointerup") {
+				// A tap, not a drag — stand click-to-focus back up (preventDefault
+				// swallowed the native one). Only a tap focuses, so the bubble it
+				// opens rings while a dragged group never does.
+				el.focus({ preventScroll: true });
 				hooks.onTap?.();
 			}
 		};

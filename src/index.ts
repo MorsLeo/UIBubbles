@@ -138,6 +138,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		zone.destroy();
 		zone = undefined;
 		window.removeEventListener("resize", onResize);
+		document.removeEventListener("pointerdown", onDocumentPointerDown, true);
 		scheme?.removeEventListener("change", onSchemeChange);
 		scheme = undefined;
 	};
@@ -163,6 +164,23 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	};
 
 	const onResize = () => group?.handleResize();
+
+	// Consumer-registered openers — buttons outside the flock that expand or
+	// switch bubbles (the demo's cards). A press on one is the trigger doing
+	// its job, not a tap-away, so it's exempt from the collapse below. Lives
+	// on the manager, not the group: triggers outlive an emptied flock.
+	const triggers = new Set<HTMLElement>();
+
+	// Tap-away to collapse, Android-style. Capture phase so a host page that
+	// stops propagation can't suppress it; pointerdown so it fires on press,
+	// not release. Purely a signal — the group never consumes the event, so
+	// the click still reaches whatever the user pressed (the panel is
+	// non-modal). Lives only while the overlay does.
+	const onDocumentPointerDown = (event: PointerEvent) => {
+		const node = event.target instanceof Node ? event.target : null;
+		for (const trigger of triggers) if (trigger.contains(node)) return;
+		group?.onOutsidePointer(event.target);
+	};
 
 	const ensureGroup = (): BubbleGroup => {
 		if (group) return group;
@@ -193,6 +211,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			}
 		);
 		window.addEventListener("resize", onResize);
+		document.addEventListener("pointerdown", onDocumentPointerDown, true);
 		scheme = window.matchMedia("(prefers-color-scheme: dark)");
 		scheme.addEventListener("change", onSchemeChange);
 		return group;
@@ -291,6 +310,10 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		active: () => group?.active(),
 		activate(id) {
 			group?.activate(id);
+		},
+		registerTrigger(el) {
+			triggers.add(el);
+			return () => triggers.delete(el);
 		},
 		on(event, handler) {
 			let handlers = listeners.get(event);

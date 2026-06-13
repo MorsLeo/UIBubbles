@@ -229,6 +229,11 @@ export const createBubbleGroup = (
 		setActive(member.id);
 		syncMembers();
 		member.panel?.show();
+		// Focus follows the new active bubble — the row's single tab stop,
+		// and where Escape/arrows are handled. A direct tap already focused
+		// it; this also lands focus when the switch came from an external
+		// trigger (activate()), whose click left focus on the trigger.
+		member.el.focus();
 	};
 
 	/** A departing active bubble hands its panel to the group's first remaining member. */
@@ -554,6 +559,20 @@ export const createBubbleGroup = (
 			collapse();
 			// The collapse reorder makes the active bubble topmost — focus
 			// lands on it, the stack's single tab stop.
+			docked()[0]?.el.focus();
+		},
+
+		// A press anywhere outside the open flock and its panel collapses
+		// the group home — Android's tap-away. Only a signal: the press is
+		// never consumed, so the same gesture also reaches whatever the user
+		// clicked on the host page (the panel is non-modal by design). A
+		// press on a bubble or inside the panel is "inside" — which also
+		// spares a press that's starting a bubble drag.
+		onOutsidePointer(target) {
+			if (mode !== "open") return;
+			const node = target instanceof Node ? target : null;
+			if (members.some((m) => m.el.contains(node) || m.panel?.contains(node))) return;
+			collapse();
 			docked()[0]?.el.focus();
 		},
 

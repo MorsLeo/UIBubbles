@@ -10,9 +10,9 @@ const HOVER_GROWTH = 4;
 const ACTIVE_SHRINK = 4;
 
 /**
- * Ring marking the keyboard-focused bubble (:focus-visible). It sits on
- * the surface and the circle shrinks to make room, so circle + gap +
- * ring never exceed the bubble's normal footprint.
+ * Ring marking the focused bubble. It sits on the surface and the circle
+ * shrinks to make room, so circle + gap + ring never exceed the bubble's
+ * normal footprint.
  */
 const OUTLINE_WIDTH = 3;
 
@@ -148,14 +148,17 @@ export const createBubbleElement = (
 		surface.style.scale = `${visualSize / span}`;
 	};
 
-	// Ring only for keyboard focus: clicking focuses the bubble too (the
-	// drag layer restores that), but :focus-visible stays false there.
 	const syncFocusRing = (next: boolean) => {
 		focused = next;
 		surface.style.outlineColor = next ? theme.focusRing : "transparent";
 		syncSurfaceScale();
 	};
-	el.addEventListener("focus", () => syncFocusRing(el.matches(":focus-visible")));
+
+	// The ring marks the focused bubble, whatever moved focus there — mouse,
+	// keyboard, or a programmatic activate(). The focused bubble is the live
+	// target (arrow keys step between bubbles, Escape collapses from it), so
+	// a plain :focus, not :focus-visible: if it can be driven, it's marked.
+	el.addEventListener("focus", () => syncFocusRing(true));
 	el.addEventListener("blur", () => syncFocusRing(false));
 
 	visualControls.set(el, {

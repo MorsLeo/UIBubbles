@@ -281,9 +281,7 @@ describe("active and activate", () => {
 		// The intermediate "a" never gets its own delivery — diffing runs
 		// once per flush, against the value last delivered.
 		expect(manager.active()).toBe("b");
-		expect(only(log, "activechange")).toEqual([
-			{ event: "activechange", detail: { id: "b" } }
-		]);
+		expect(only(log, "activechange")).toEqual([{ event: "activechange", detail: { id: "b" } }]);
 	});
 
 	it("expands a docked group on the chosen bubble", async () => {
@@ -362,5 +360,44 @@ describe("active and activate", () => {
 		// to "docked" once the bubble is gone, so both land by the end.
 		expect(log).toContainEqual({ event: "statechange", detail: { state: "docked" } });
 		expect(log).toContainEqual({ event: "activechange", detail: { id: undefined } });
+	});
+});
+
+describe("outside press (tap-away)", () => {
+	const pressOutside = (el: EventTarget) =>
+		el.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+
+	it("collapses an open group", async () => {
+		manager = createBubbles();
+		manager.add({ id: "a" });
+		manager.activate("a");
+		await tick();
+		expect(manager.state()).toBe("open");
+
+		pressOutside(document.body.appendChild(document.createElement("div")));
+		await tick();
+		expect(manager.state()).toBe("docked");
+	});
+
+	it("exempts a registered trigger, and the unregister restores tap-away", async () => {
+		manager = createBubbles();
+		manager.add({ id: "a" });
+		const trigger = document.body.appendChild(document.createElement("button"));
+		const unregister = manager.registerTrigger(trigger);
+
+		manager.activate("a");
+		await tick();
+		expect(manager.state()).toBe("open");
+
+		// A press on the registered trigger is the trigger doing its job.
+		pressOutside(trigger);
+		await tick();
+		expect(manager.state()).toBe("open");
+
+		// Unregistered, the same press collapses like any outside press.
+		unregister();
+		pressOutside(trigger);
+		await tick();
+		expect(manager.state()).toBe("docked");
 	});
 });

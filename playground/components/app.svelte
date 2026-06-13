@@ -4,10 +4,8 @@
 	import Cards from "$playground/components/cards.svelte";
 	import NavBar from "$playground/components/nav-bar.svelte";
 	import { config } from "$playground/config.svelte";
-	import { defaults } from "$playground/defaults";
 	import { mountInto } from "$playground/mount";
 	import { effectiveTheme, toBubblesOptions } from "$playground/options";
-	import { configSnippet } from "$playground/snippet";
 	import type { Card } from "$playground/types";
 	import { writeConfig } from "$playground/url";
 	import { createBubbles } from "$src/index";
@@ -67,16 +65,20 @@
 		return true;
 	};
 
-	const toggle = (card: Card) => {
-		if (spawned[card.id]) {
-			manager.remove(card.id);
-			drop(card.id);
-			return;
+	// A card only ever opens its panel up top — it never removes. Spawn
+	// the bubble if it's gone (evicting under the cap to make room), then
+	// activate() leads with it: expands a docked group onto it, switches
+	// an open row to it, or — if it's already the shown panel — does
+	// nothing. Removal is the standard bubble UI's job (drag to dismiss,
+	// Delete), not the card's.
+	const open = (card: Card) => {
+		if (!spawned[card.id]) {
+			// At the cap, the oldest bubble makes room instead of the
+			// click going dead — every card stays a live control.
+			while (order.length >= config.maxBubbles && evict());
+			if (!spawn(card)) return;
 		}
-		// At the cap, the oldest bubble makes room instead of the card
-		// going dead — every card stays a live control.
-		while (order.length >= config.maxBubbles && evict());
-		spawn(card);
+		manager.activate(card.id);
 	};
 
 	// Boot: bubbles spawn straight into the open row (initialState), in
@@ -109,26 +111,6 @@
 
 	$effect(() => writeConfig(config));
 
-	// Compared as snippets so it stays honest if the demo defaults ever
-	// diverge from the library's.
-	const dirty = $derived(configSnippet(config) !== configSnippet(defaults));
-	const reset = () => Object.assign(config, defaults);
-
-	// The chip surfaces the settings panel. Spawn the bubble if it's gone
-	// (under the usual cap rules), then activate() brings its panel to the
-	// front: it expands a docked group on settings, switches an open row to
-	// it, or — if settings is already the shown panel — does nothing.
-	const showSettings = () => {
-		const settings = cards.find((card) => card.id === "settings");
-		if (!settings) return;
-
-		if (!spawned[settings.id]) {
-			while (order.length >= config.maxBubbles && evict());
-			if (!spawn(settings)) return;
-		}
-		manager.activate(settings.id);
-	};
-
 	// The favicon flips with the page: each variant is the mark on a
 	// rounded square in the theme's background/foreground pair. With
 	// "auto", effectiveTheme tracks the OS preference reactively.
@@ -154,7 +136,7 @@
 			</p>
 		</header>
 
-		<Cards {spawned} {toggle} {dirty} {reset} {showSettings} />
+		<Cards {open} registerTrigger={manager.registerTrigger} />
 	</main>
 
 	<footer class="mt-8 text-xs text-zinc-500 light:text-zinc-600">
