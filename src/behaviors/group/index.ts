@@ -625,8 +625,8 @@ export const createBubbleGroup = (
 
 			// Already front and center — don't steal focus for a no-op.
 			if (id === activeId) return;
+			// switchTo lands focus on the target — the row's single tab stop.
 			switchTo(member);
-			member.el.focus();
 		},
 
 		onDragStart(id, x, y, coarse) {

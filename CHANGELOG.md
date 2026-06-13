@@ -25,8 +25,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   programmatic `activate()` — instead of keyboard focus (`:focus-visible`) only; the focused bubble is
   the live keyboard target, so it's always marked. Focus restores on tap rather than on grab, so
   dragging or flinging the group no longer rings a bubble
-- `manager.activate(id)` now moves keyboard focus to the target when it switches the open row's panel,
-  matching its documented contract (previously focus only moved when expanding a docked group)
 
 ## [0.3.0] - 2026-06-12
 

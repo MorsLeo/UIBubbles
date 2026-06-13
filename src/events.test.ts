@@ -317,6 +317,22 @@ describe("active and activate", () => {
 		expect(log).toEqual([{ event: "activechange", detail: { id: "b" } }]);
 	});
 
+	it("moves focus to the bubble it switches to", async () => {
+		manager = createBubbles();
+		manager.add({ id: "a", label: "a" });
+		manager.add({ id: "b", label: "b" });
+		manager.activate("a");
+		await tick();
+
+		// Switching the open row hands focus to the target (the row's single
+		// tab stop) even when the call came from outside, where focus sat.
+		manager.activate("b");
+		await tick();
+
+		expect(manager.active()).toBe("b");
+		expect(document.activeElement).toBe(bubbleEl("b"));
+	});
+
 	it("is idempotent on the already-active bubble of an open group", async () => {
 		manager = createBubbles();
 		manager.add({ id: "a" });
@@ -399,5 +415,32 @@ describe("outside press (tap-away)", () => {
 		pressOutside(trigger);
 		await tick();
 		expect(manager.state()).toBe("docked");
+	});
+
+	it("ignores a press on a bubble", async () => {
+		manager = createBubbles();
+		manager.add({ id: "a", label: "a" });
+		manager.activate("a");
+		await tick();
+		expect(manager.state()).toBe("open");
+
+		// A bubble is "inside" — which also spares a press starting a drag.
+		pressOutside(bubbleEl("a"));
+		await tick();
+		expect(manager.state()).toBe("open");
+	});
+
+	it("ignores a press inside the panel", async () => {
+		manager = createBubbles();
+		const content = document.createElement("div");
+		const inner = content.appendChild(document.createElement("button"));
+		manager.add({ id: "a", label: "a", content });
+		manager.activate("a");
+		await tick();
+		expect(manager.state()).toBe("open");
+
+		pressOutside(inner);
+		await tick();
+		expect(manager.state()).toBe("open");
 	});
 });
