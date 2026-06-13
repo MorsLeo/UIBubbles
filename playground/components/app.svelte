@@ -127,27 +127,24 @@
 <div class="flex min-h-dvh flex-col items-center p-6 font-sans">
 	<!-- my-auto centers the content in the leftover space while the
 	     footer keeps its in-flow spot at the bottom of the column. -->
-	<main class="my-auto flex w-full max-w-152 flex-col items-center gap-8">
-		<header class="flex flex-col items-center gap-3 text-center">
-			<h1 class="text-3xl font-semibold tracking-tight text-white light:text-zinc-900">bubbles</h1>
-			<p class="max-w-md text-sm text-zinc-400 light:text-zinc-600">
-				Android-style app bubbles for any website. Drag them, fling them, stack them — then open the
-				settings bubble to make them yours.
-			</p>
-		</header>
-
-		<Cards {open} registerTrigger={manager.registerTrigger} />
+	<main class="my-auto flex w-full max-w-152 flex-col items-center gap-3 text-center">
+		<h1 class="text-3xl font-semibold tracking-tight text-white light:text-zinc-900">bubbles</h1>
+		<p class="max-w-md text-sm text-zinc-400 light:text-zinc-600">
+			Android-style app bubbles for any website. Drag them, fling them, stack them — then open the
+			settings bubble to make them yours.
+		</p>
+		<p class="text-xs text-zinc-500 light:text-zinc-600">
+			Built by
+			<a
+				href="https://www.youtube.com/@Hyperplexed"
+				target="_blank"
+				rel="noopener"
+				class="focus-ring rounded font-semibold text-zinc-300 transition-colors hover:text-white light:text-zinc-700 light:hover:text-zinc-900"
+			>
+				@Hyperplexed
+			</a>
+		</p>
 	</main>
-
-	<footer class="mt-8 text-xs text-zinc-500 light:text-zinc-600">
-		Built by
-		<a
-			href="https://www.youtube.com/@Hyperplexed"
-			target="_blank"
-			rel="noopener"
-			class="focus-ring rounded font-semibold text-zinc-300 transition-colors hover:text-white light:text-zinc-700 light:hover:text-zinc-900"
-		>
-			@Hyperplexed
-		</a>
-	</footer>
 </div>
+
+<Cards {open} registerTrigger={manager.registerTrigger} />
