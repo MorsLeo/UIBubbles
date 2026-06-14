@@ -43,6 +43,7 @@ export const glyphInk = (config: PlaygroundConfig): string =>
 export const toBubblesOptions = (config: PlaygroundConfig): BubblesOptions => ({
 	theme: config.theme,
 	colors: config.color ? accentColors(config.color) : undefined,
+	initialState: config.initialState,
 	side: config.side,
 	vertical: config.vertical,
 	panelWidth: config.panelWidth,

@@ -11,11 +11,11 @@
 	import { createBubbles, type PanelLength } from "$src/index";
 	import { untrack } from "svelte";
 
-	// The navbar toggles bubbles in and out, and an incoming bubble should
-	// always fall in from the top into the open row — never dock in from the
-	// side. So the group stays "open" for its whole life: at boot, on every
-	// configure() below, and when an emptied flock is reborn.
-	const manager = createBubbles({ ...toBubblesOptions(config), initialState: "open" });
+	// initialState is a live setting (Settings → Initial state). At "open"
+	// the flock rests up top and the navbar brings bubbles in from there; at
+	// "docked" they enter docked on an edge. It rides toBubblesOptions into
+	// both the boot below and every configure().
+	const manager = createBubbles(toBubblesOptions(config));
 	let spawned = $state<Record<string, boolean>>({});
 
 	// Spawn order, oldest first — the eviction queue when the cap is hit.
@@ -90,17 +90,18 @@
 		// dead — every button stays a live control.
 		while (order.length >= config.maxBubbles && evict());
 
-		// A collapsed-but-occupied flock opens first, so the new bubble joins
-		// an open row from the top. An empty group is already "open" (its
-		// initialState), so this no-ops and the first bubble is born up top.
-		if (manager.state() === "docked") manager.toggle();
+		// When the demo rests open, a collapsed-but-occupied flock opens first
+		// so the new bubble joins the row from the top (an empty group is
+		// already open, so this no-ops). When it rests docked, the entrant is
+		// left to dock in from the side per initialState.
+		if (config.initialState === "open" && manager.state() === "docked") manager.toggle();
 		spawn(card);
 	};
 
-	// Boot: bubbles spawn straight into the open row (initialState), in
-	// reverse display order so the first card ends newest — leftmost in
-	// the row, panel showing. The slice keeps settings inside a URL-capped
-	// boot.
+	// Boot: every card spawns at load (per initialState — the open row, or
+	// the docked stack), in reverse display order so the first card ends
+	// newest: leftmost in the row, or topmost on the stack. The slice keeps
+	// the boot within the cap.
 	$effect(() => {
 		untrack(() => {
 			for (const card of cards.slice(0, config.maxBubbles).reverse()) spawn(card);
@@ -109,11 +110,11 @@
 	});
 
 	// Config changes apply in place — surfaces repaint, panels reflow,
-	// nothing re-enters. initialState stays "open" so a flock cleared and
-	// refilled is reborn into the open row (the navbar's entry-from-top), not
-	// docked. Dock side/vertical still land on the next fresh entry.
+	// nothing re-enters. initialState, side, and vertical describe how a fresh
+	// flock enters, so a changed value lands on the next entry (a toggled-in
+	// bubble, or page load), per the library contract.
 	$effect(() => {
-		manager.configure({ ...toBubblesOptions(config), initialState: "open" });
+		manager.configure(toBubblesOptions(config));
 	});
 
 	// A lowered cap applies immediately. The library never evicts on

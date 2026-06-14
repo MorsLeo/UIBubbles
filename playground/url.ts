@@ -21,6 +21,9 @@ export const readConfig = (): Partial<PlaygroundConfig> => {
 	const color = params.get("color");
 	if (color && /^[0-9a-f]{6}$/i.test(color)) config.color = color.toLowerCase();
 
+	const initialState = params.get("initial-state");
+	if (initialState === "docked" || initialState === "open") config.initialState = initialState;
+
 	const side = params.get("side");
 	if (side === "left" || side === "right") config.side = side;
 
@@ -43,6 +46,7 @@ export const writeConfig = (config: PlaygroundConfig): void => {
 	const params = new URLSearchParams();
 	if (config.theme !== defaults.theme) params.set("theme", config.theme);
 	if (config.color) params.set("color", config.color);
+	if (config.initialState !== defaults.initialState) params.set("initial-state", config.initialState);
 	if (config.side !== defaults.side) params.set("side", config.side);
 	if (config.vertical !== defaults.vertical) params.set("vertical", `${config.vertical}`);
 	if (config.panelWidth !== defaults.panelWidth) params.set("panel-width", `${config.panelWidth}`);

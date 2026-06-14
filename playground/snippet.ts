@@ -16,6 +16,10 @@ export const configSnippet = (config: PlaygroundConfig): string => {
 			.join(", ");
 		lines.push(`\tcolors: { ${tokens} }`);
 	}
+	// Compared against the library default ("docked"), not the demo default
+	// ("open"), so the copied snippet reproduces what's on screen — the
+	// library would otherwise fall back to docked.
+	if (config.initialState !== "docked") lines.push(`\tinitialState: "${config.initialState}"`);
 	if (config.side !== defaults.side) lines.push(`\tside: "${config.side}"`);
 	if (config.vertical !== defaults.vertical) lines.push(`\tvertical: ${config.vertical}`);
 	if (config.panelWidth !== defaults.panelWidth) {

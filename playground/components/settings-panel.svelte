@@ -83,6 +83,16 @@
 		/>
 
 		<ControlSegmented
+			label="Initial state"
+			options={[
+				{ value: "docked", label: "Docked" },
+				{ value: "open", label: "Open" }
+			]}
+			value={config.initialState}
+			onSelect={(initialState) => (config.initialState = initialState)}
+		/>
+
+		<ControlSegmented
 			label="Dock side"
 			options={[
 				{ value: "left", label: "Left" },
