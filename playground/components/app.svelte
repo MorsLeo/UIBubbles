@@ -150,17 +150,6 @@
 			Android-style app bubbles for any website. Drag them, fling them, stack them — then open the
 			settings bubble to make them yours.
 		</p>
-		<p class="text-xs text-zinc-500 light:text-zinc-600">
-			Built by
-			<a
-				href="https://www.youtube.com/@Hyperplexed"
-				target="_blank"
-				rel="noopener"
-				class="focus-ring rounded font-semibold text-zinc-300 transition-colors hover:text-white light:text-zinc-700 light:hover:text-zinc-900"
-			>
-				@Hyperplexed
-			</a>
-		</p>
 	</main>
 </div>
 
