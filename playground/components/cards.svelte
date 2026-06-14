@@ -3,21 +3,24 @@
 	import type { Card } from "$playground/types";
 
 	const {
-		open,
+		toggle,
+		spawned,
 		registerTrigger
 	}: {
-		open: (card: Card) => void;
+		toggle: (card: Card) => void;
+		spawned: Record<string, boolean>;
 		registerTrigger: (el: HTMLElement) => () => void;
 	} = $props();
 
-	// The cards open and switch bubbles, so a press on one is a trigger,
-	// not a tap-away — registering the row keeps the press from collapsing
-	// the flock a beat before open() reopens it.
+	// The buttons toggle bubbles in and out, so a press is a trigger, not a
+	// tap-away — registering the row keeps a toggle-in from collapsing the
+	// flock a beat before the new bubble enters.
 	const trigger = (node: HTMLElement) => ({ destroy: registerTrigger(node) });
 </script>
 
 <!-- A floating, bottom-mounted control bar — fixed and centered on every
-     breakpoint, clearing the home indicator via the safe-area inset. -->
+     breakpoint, clearing the home indicator via the safe-area inset. Each
+     button toggles its bubble, lit while that bubble is present. -->
 <div
 	class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
 >
@@ -28,9 +31,14 @@
 		{#each cards as card (card.id)}
 			<button
 				type="button"
-				onclick={() => open(card)}
+				onclick={() => toggle(card)}
+				aria-pressed={spawned[card.id] ? "true" : "false"}
 				aria-label={card.title}
-				class="focus-ring flex cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white light:text-zinc-600 light:hover:bg-zinc-100 light:hover:text-zinc-900"
+				class="focus-ring flex cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors {spawned[
+					card.id
+				]
+					? 'bg-zinc-800 text-white light:bg-zinc-200 light:text-zinc-900'
+					: 'text-zinc-400 hover:bg-zinc-900 hover:text-white light:text-zinc-600 light:hover:bg-zinc-100 light:hover:text-zinc-900'}"
 			>
 				<card.icon size={18} />
 				<span class="hidden xs:inline">{card.title}</span>

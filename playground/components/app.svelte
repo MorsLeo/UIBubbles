@@ -11,9 +11,10 @@
 	import { createBubbles, type PanelLength } from "$src/index";
 	import { untrack } from "svelte";
 
-	// The demo boots expanded up top — but only the boot. The recurring
-	// configure() below omits initialState, so a flock re-toggled after
-	// emptying enters docked at the side instead of covering the cards.
+	// The navbar toggles bubbles in and out, and an incoming bubble should
+	// always fall in from the top into the open row — never dock in from the
+	// side. So the group stays "open" for its whole life: at boot, on every
+	// configure() below, and when an emptied flock is reborn.
 	const manager = createBubbles({ ...toBubblesOptions(config), initialState: "open" });
 	let spawned = $state<Record<string, boolean>>({});
 
@@ -72,20 +73,28 @@
 		return true;
 	};
 
-	// A card only ever opens its panel up top — it never removes. Spawn
-	// the bubble if it's gone (evicting under the cap to make room), then
-	// activate() leads with it: expands a docked group onto it, switches
-	// an open row to it, or — if it's already the shown panel — does
-	// nothing. Removal is the standard bubble UI's job (drag to dismiss,
-	// Delete), not the card's.
-	const open = (card: Card) => {
-		if (!spawned[card.id]) {
-			// At the cap, the oldest bubble makes room instead of the
-			// click going dead — every card stays a live control.
-			while (order.length >= config.maxBubbles && evict());
-			if (!spawn(card)) return;
+	// Each navbar button is a toggle. A press on a present bubble removes it —
+	// it exits toward wherever it sits (up from the open row, or off its
+	// docked side), the library's own retire animation. A press on an absent
+	// one brings it in from the top: make room under the cap, make sure the
+	// group is open so the entrant falls in rather than docking from the side,
+	// then spawn — add() lands it active with its panel showing.
+	const toggleCard = (card: Card) => {
+		if (spawned[card.id]) {
+			manager.remove(card.id);
+			drop(card.id);
+			return;
 		}
-		manager.activate(card.id);
+
+		// At the cap, the oldest bubble makes room instead of the click going
+		// dead — every button stays a live control.
+		while (order.length >= config.maxBubbles && evict());
+
+		// A collapsed-but-occupied flock opens first, so the new bubble joins
+		// an open row from the top. An empty group is already "open" (its
+		// initialState), so this no-ops and the first bubble is born up top.
+		if (manager.state() === "docked") manager.toggle();
+		spawn(card);
 	};
 
 	// Boot: bubbles spawn straight into the open row (initialState), in
@@ -100,10 +109,11 @@
 	});
 
 	// Config changes apply in place — surfaces repaint, panels reflow,
-	// nothing re-enters. Dock side/vertical land on the next fresh entry
-	// (page load, or after the flock is cleared), per the library contract.
+	// nothing re-enters. initialState stays "open" so a flock cleared and
+	// refilled is reborn into the open row (the navbar's entry-from-top), not
+	// docked. Dock side/vertical still land on the next fresh entry.
 	$effect(() => {
-		manager.configure(toBubblesOptions(config));
+		manager.configure({ ...toBubblesOptions(config), initialState: "open" });
 	});
 
 	// A lowered cap applies immediately. The library never evicts on
@@ -154,4 +164,4 @@
 	</main>
 </div>
 
-<Cards {open} registerTrigger={manager.registerTrigger} />
+<Cards toggle={toggleCard} {spawned} registerTrigger={manager.registerTrigger} />
