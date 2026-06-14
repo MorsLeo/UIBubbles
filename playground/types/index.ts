@@ -1,4 +1,4 @@
-import type { BubbleSide, BubbleThemeName } from "$src/index";
+import type { BubbleSide, BubblesState, BubbleThemeName } from "$src/index";
 import { type Component } from "svelte";
 
 export interface PlaygroundConfig {
@@ -6,6 +6,8 @@ export interface PlaygroundConfig {
 	theme: BubbleThemeName | "auto";
 	/** Accent hex without the # (URL/snippet encoding); undefined keeps the preset's surfaces. */
 	color: string | undefined;
+	/** Resting arrangement a fresh flock enters: "open" up top, "docked" on an edge. */
+	initialState: BubblesState;
 	side: BubbleSide;
 	vertical: number;
 	panelWidth: number;

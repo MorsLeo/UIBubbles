@@ -13,10 +13,17 @@ export const ranges = {
 	maxBubbles: { min: 1, max: 5 }
 } as const;
 
-/** Mirrors the library defaults; the URL and snippet omit matching values. */
+/**
+ * Mirrors the library defaults so the URL and snippet can omit matching
+ * values — except initialState, which the demo flips to "open" (the
+ * library defaults to "docked") to show the flock up top. The snippet
+ * compares that one against the library default, not this, so it stays
+ * runnable.
+ */
 export const defaults: PlaygroundConfig = {
 	theme: "auto",
 	color: undefined,
+	initialState: "open",
 	side: "right",
 	vertical: 0.5,
 	panelWidth: 480,
