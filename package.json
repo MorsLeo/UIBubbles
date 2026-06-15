@@ -21,7 +21,9 @@
 		}
 	},
 	"files": [
-		"dist"
+		"dist",
+		"src",
+		"!src/**/*.test.ts"
 	],
 	"sideEffects": false,
 	"publishConfig": {
@@ -37,7 +39,7 @@
 		"test:e2e:ui": "playwright test --ui",
 		"check": "svelte-check --tsconfig ./tsconfig.json",
 		"format": "prettier --write .",
-		"prepublishOnly": "bun run test && bun run build"
+		"prepublishOnly": "bun run check && bun run test && bun run build"
 	},
 	"keywords": [
 		"bubbles",
@@ -51,6 +53,10 @@
 		"typescript"
 	],
 	"license": "MIT",
+	"engines": {
+		"node": ">=18"
+	},
+	"packageManager": "bun@1.3.8",
 	"devDependencies": {
 		"@ianvs/prettier-plugin-sort-imports": "^4.7.1",
 		"@playwright/test": "^1.60.0",

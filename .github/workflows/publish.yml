@@ -16,14 +16,22 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - uses: actions/setup-node@v5
+      # Actions pinned to commit SHAs (not moving major tags): this job holds
+      # the OIDC token and runs the publish, so a tampered tag here is the one
+      # that matters. Comments track the human-readable version.
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 24
       # Trusted publishing needs npm 11.5.1+; the node-bundled npm can lag.
-      - run: npm install -g npm@latest
+      # Pinned to the 11.x major (currently 11.17.0) instead of @latest, so a
+      # future npm major can't silently change the release.
+      - run: npm install -g npm@11
       - run: bun install --frozen-lockfile
+      # Same gate as CI (types + unit + build) so a release can't go out from a
+      # commit CI would reject. (e2e stays in CI — it downloads a browser.)
+      - run: bun run check
       - run: bun run test
       - run: bun run build
       - run: npm publish --provenance --access public
