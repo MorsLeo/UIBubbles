@@ -177,18 +177,18 @@ bubbleThemes.light.panelSurface; // "#ffffff"
 
 Every token the library paints with:
 
-| Token            | Paints                                                               |
-| ---------------- | -------------------------------------------------------------------- |
-| `bubbleSurface`  | Fill of the collapsed bubble circle                                  |
+| Token            | Paints                                                                   |
+| ---------------- | ------------------------------------------------------------------------ |
+| `bubbleSurface`  | Fill of the collapsed bubble circle                                      |
 | `bubbleIcon`     | Stroke of the built-in ellipsis glyph (only when a bubble has no `icon`) |
-| `bubbleShadow`   | Drop shadow under each bubble                                        |
-| `focusRing`      | Ring marking the focused bubble                                      |
-| `panelSurface`   | Fill of the expanded panel and its caret                             |
-| `panelText`      | Default text color inside the panel                                  |
-| `panelShadow`    | Drop shadow under the panel                                          |
-| `dismissSurface` | Fill of the drag-to-dismiss target circle                            |
-| `dismissBorder`  | Border of the dismiss target circle                                  |
-| `dismissIcon`    | Stroke of the X inside the dismiss target                            |
+| `bubbleShadow`   | Drop shadow under each bubble                                            |
+| `focusRing`      | Ring marking the focused bubble                                          |
+| `panelSurface`   | Fill of the expanded panel and its caret                                 |
+| `panelText`      | Default text color inside the panel                                      |
+| `panelShadow`    | Drop shadow under the panel                                              |
+| `dismissSurface` | Fill of the drag-to-dismiss target circle                                |
+| `dismissBorder`  | Border of the dismiss target circle                                      |
+| `dismissIcon`    | Stroke of the X inside the dismiss target                                |
 
 Inside the panel, `content` is your element — style it however you like; only `panelText` cascades in as a default.
 

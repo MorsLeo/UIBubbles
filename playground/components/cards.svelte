@@ -43,9 +43,10 @@
 				onclick={() => toggle(card)}
 				aria-pressed={spawned[card.id] ? "true" : "false"}
 				aria-label={card.title}
-				class="focus-ring flex cursor-pointer items-center gap-2 {corners(i, cards.length)} px-3.5 py-2.5 text-sm font-medium transition-colors {spawned[
-					card.id
-				]
+				class="focus-ring flex cursor-pointer items-center gap-2 {corners(
+					i,
+					cards.length
+				)} px-3.5 py-2.5 text-sm font-medium transition-colors {spawned[card.id]
 					? 'bg-zinc-800 text-white light:bg-zinc-200 light:text-zinc-900'
 					: 'text-zinc-400 hover:bg-zinc-900 hover:text-white light:text-zinc-600 light:hover:bg-zinc-100 light:hover:text-zinc-900'}"
 			>

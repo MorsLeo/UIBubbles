@@ -31,7 +31,7 @@ Consequences:
   in it would bypass provenance.
 - The only capability needed to publish is the ability to **push tags and create a GitHub
   Release** (GitHub auth / the `gh` CLI).
-- Publishing fires **only** on a *published GitHub Release*. Pushing a tag alone does
+- Publishing fires **only** on a _published GitHub Release_. Pushing a tag alone does
   **not** publish.
 
 ## Release procedure

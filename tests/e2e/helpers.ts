@@ -38,8 +38,7 @@ export const settled = async (page: Page, timeout = 4000): Promise<void> => {
 	});
 	await page.waitForFunction(
 		() => {
-			const state = (window as unknown as { __settle: { prev: string; stable: number } })
-				.__settle;
+			const state = (window as unknown as { __settle: { prev: string; stable: number } }).__settle;
 			const snapshot = [...document.querySelectorAll('[role="button"][aria-label]')]
 				.map((el) => {
 					const r = el.getBoundingClientRect();

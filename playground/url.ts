@@ -49,7 +49,8 @@ export const writeConfig = (config: PlaygroundConfig): void => {
 	const params = new URLSearchParams();
 	if (config.theme !== defaults.theme) params.set("theme", config.theme);
 	if (config.color) params.set("color", config.color);
-	if (config.initialState !== defaults.initialState) params.set("initial-state", config.initialState);
+	if (config.initialState !== defaults.initialState)
+		params.set("initial-state", config.initialState);
 	if (config.side !== defaults.side) params.set("side", config.side);
 	if (config.vertical !== defaults.vertical) params.set("vertical", `${config.vertical}`);
 	if (config.panelWidth !== defaults.panelWidth) params.set("panel-width", `${config.panelWidth}`);

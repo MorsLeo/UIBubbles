@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { bubble } from "./helpers";
 
 // Touch + small-viewport coverage on real mobile devices (Pixel 7 /

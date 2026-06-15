@@ -13,9 +13,8 @@
 			'href="https://github.com/githyperplexed/bubbles/blob/main/LICENSE"'
 		)
 		.replaceAll('<a href="http', '<a target="_blank" rel="noreferrer" href="http')
-		.replace(
-			/<a target="_blank" rel="noreferrer" href="http[^"]+">([\s\S]*?)<\/a>/g,
-			(anchor) => anchor.replace("</a>", `${externalLinkNote}</a>`)
+		.replace(/<a target="_blank" rel="noreferrer" href="http[^"]+">([\s\S]*?)<\/a>/g, (anchor) =>
+			anchor.replace("</a>", `${externalLinkNote}</a>`)
 		);
 </script>
 
