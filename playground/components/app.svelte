@@ -36,18 +36,15 @@
 	// they need no handler here.
 	manager.on("dismiss", ({ id }) => drop(id));
 
-	// The README panel gets a fixed width — prose needs the room — and caps
-	// its height at 70% of the viewport so the long readme scrolls inside a
-	// contained panel; the "%" tracks resizes on its own. The rest ride the
-	// configurable panel width and the default height.
+	// The README panel gets a fixed width — prose needs the room; the rest
+	// ride the configurable panel width. Every panel caps its height at 70%
+	// of the viewport so its content scrolls inside a contained panel; the
+	// "%" tracks resizes on its own.
 	const DOCS_PANEL_WIDTH = 960;
-	const DOCS_PANEL_MAX_HEIGHT = "70%";
+	const PANEL_MAX_HEIGHT: PanelLength = "70%";
 
 	const panelWidthFor = (card: Card): number | undefined =>
 		card.id === "docs" ? DOCS_PANEL_WIDTH : undefined;
-
-	const panelMaxHeightFor = (card: Card): PanelLength | undefined =>
-		card.id === "docs" ? DOCS_PANEL_MAX_HEIGHT : undefined;
 
 	const spawn = (card: Card): boolean => {
 		const added = manager.add({
@@ -56,7 +53,7 @@
 			icon: mountInto(BubbleGlyph, { icon: card.icon }),
 			content: mountInto(card.panel),
 			panelWidth: panelWidthFor(card),
-			panelMaxHeight: panelMaxHeightFor(card)
+			panelMaxHeight: PANEL_MAX_HEIGHT
 		});
 		spawned[card.id] = added;
 		if (added) order.push(card.id);
