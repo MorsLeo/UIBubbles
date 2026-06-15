@@ -18,7 +18,11 @@ export default defineConfig({
 		baseURL: "http://localhost:5174",
 		trace: "on-first-retry"
 	},
-	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+	projects: [
+		{ name: "chromium", use: { ...devices["Desktop Chrome"] } },
+		{ name: "firefox", use: { ...devices["Desktop Firefox"] } },
+		{ name: "webkit", use: { ...devices["Desktop Safari"] } }
+	],
 	webServer: {
 		command: "bunx vite --config tests/e2e/fixture.vite.ts --port 5174 --strictPort",
 		url: "http://localhost:5174",
