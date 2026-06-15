@@ -19,9 +19,14 @@ export default defineConfig({
 		trace: "on-first-retry"
 	},
 	projects: [
-		{ name: "chromium", use: { ...devices["Desktop Chrome"] } },
-		{ name: "firefox", use: { ...devices["Desktop Firefox"] } },
-		{ name: "webkit", use: { ...devices["Desktop Safari"] } }
+		// Desktop engines run the full suite except the touch-only spec.
+		{ name: "chromium", testIgnore: /mobile\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+		{ name: "firefox", testIgnore: /mobile\.spec\.ts/, use: { ...devices["Desktop Firefox"] } },
+		{ name: "webkit", testIgnore: /mobile\.spec\.ts/, use: { ...devices["Desktop Safari"] } },
+		// Mobile devices (real touch + small viewport) run only the tap-driven
+		// spec — drag gestures need a CDP touch helper and are out of scope here.
+		{ name: "mobile-chrome", testMatch: /mobile\.spec\.ts/, use: { ...devices["Pixel 7"] } },
+		{ name: "mobile-safari", testMatch: /mobile\.spec\.ts/, use: { ...devices["iPhone 14"] } }
 	],
 	webServer: {
 		command: "bunx vite --config tests/e2e/fixture.vite.ts --port 5174 --strictPort",
