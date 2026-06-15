@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-15
+
 ### Added
 
 - `icon` and `content` now also accept a render callback — `(host) => teardown` — alongside an
