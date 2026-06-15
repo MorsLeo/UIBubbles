@@ -1,0 +1,20 @@
+# Line-ending policy for the whole repo, independent of each contributor's
+# local Git config. Text files are stored as LF in the repository AND checked
+# out as LF in the working tree on every platform — so Windows checkouts stop
+# introducing CRLF, and Prettier (endOfLine: "lf") stays happy.
+* text=auto eol=lf
+
+# Binary assets: Git must never apply line-ending conversion to these.
+*.gif binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp4 binary
+*.webm binary
+*.pdf binary
