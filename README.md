@@ -8,9 +8,11 @@ Android-style app bubbles for the web. Floating, draggable bubbles that snap to 
 
 - **Zero dependencies, framework-agnostic** — plain TypeScript over the DOM; works with anything, ships nothing else
 - **Real physics** — spring glides, momentum flings, chained trail drags, a magnetic dismiss target
-- **Fully keyboard accessible** — single tab stop, arrow-key navigation, ARIA semantics throughout
+- **Keyboard accessible** — single tab stop, arrow-key navigation, ARIA semantics throughout
 - **Respects `prefers-reduced-motion`** — every animation has a calm equivalent
 - **Customizable** — follows the system color scheme by default, with dark/light presets, per-token color overrides, dock position, panel sizing
+
+> **Browser-only DOM library.** Importing is SSR-safe — nothing renders until you mount — but it runs only in the browser; call `createBubbles()` / `add()` client-side.
 
 ## Install
 
@@ -244,10 +246,12 @@ The whole group is a single tab stop. The docked stack announces as one button; 
 
 Panels are non-modal dialogs (`role="dialog"`, labelled by the bubble's `label`, wired via `aria-controls`/`aria-expanded`); the host page stays reachable behind them. The dismiss target is pointer-only decoration and hidden from assistive tech — keyboard dismissal has its own path. All motion honors `prefers-reduced-motion` with fades in place of flights.
 
+Accessibility here is built to spec — the ARIA roles, single tab stop, and keyboard model above — rather than audited with real screen readers. Feedback from assistive-tech users is very welcome.
+
 ## Notes
 
 - Bubbles render at the top of the stacking order (`z-index` near max). If your page also uses extreme z-indexes, bubbles paint above panels by design — a dragged bubble slides over its fading panel, never behind it.
-- Pointer Events and the Web Animations API are required — i.e., all evergreen browsers.
+- Pointer Events and the Web Animations API are required — i.e., all evergreen browsers. The interaction suite runs in CI against Chromium, Firefox, and WebKit, plus touch on Pixel 7 and iPhone 14.
 - The package ships ESM with type declarations; `sideEffects: false` keeps it tree-shakeable.
 
 ## Development
@@ -257,6 +261,7 @@ bun install
 bun run dev        # playground at the Vite dev URL
 bun run check      # svelte-check over the whole repo
 bun run test       # vitest unit tests
+bun run test:e2e   # Playwright browser tests (Chromium/Firefox/WebKit + mobile)
 bun run build      # library build to dist/
 bun run build:site # playground build to dist-site/
 ```
