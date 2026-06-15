@@ -1,15 +1,13 @@
 import type { PlaygroundConfig } from "$playground/types";
 
-/** Slider ceiling that means "no panel height cap". */
-export const AUTO_PANEL_MAX_HEIGHT = 720;
-
 /** Slider bounds, shared by the controls and the URL param clamping. */
 export const ranges = {
 	vertical: { min: 0, max: 1, step: 0.05 },
 	// The top end exceeds any common viewport; the library clamps the
 	// panel inside the screen margins, so max reads as "full width".
 	panelWidth: { min: 280, max: 1600, step: 20 },
-	panelMaxHeight: { min: 240, max: AUTO_PANEL_MAX_HEIGHT, step: 40 },
+	// Panel max height as a viewport percentage — the library takes "%".
+	panelMaxHeight: { min: 10, max: 100, step: 10 },
 	maxBubbles: { min: 1, max: 5 }
 } as const;
 
@@ -27,6 +25,6 @@ export const defaults: PlaygroundConfig = {
 	side: "right",
 	vertical: 0.5,
 	panelWidth: 480,
-	panelMaxHeight: AUTO_PANEL_MAX_HEIGHT,
+	panelMaxHeight: 70,
 	maxBubbles: 5
 };

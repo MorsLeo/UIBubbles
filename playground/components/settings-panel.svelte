@@ -7,7 +7,7 @@
 	import MinusIcon from "$playground/components/icons/minus-icon.svelte";
 	import PlusIcon from "$playground/components/icons/plus-icon.svelte";
 	import { config } from "$playground/config.svelte";
-	import { AUTO_PANEL_MAX_HEIGHT, defaults, ranges } from "$playground/defaults";
+	import { defaults, ranges } from "$playground/defaults";
 	import { configSnippet } from "$playground/snippet";
 	import type { Swatch } from "$playground/types";
 
@@ -68,6 +68,15 @@
 			<span class="truncate text-sm font-semibold">Customize</span>
 			<span class="truncate text-xs text-zinc-400 light:text-zinc-600">Changes apply live</span>
 		</div>
+		{#if dirty}
+			<button
+				type="button"
+				onclick={reset}
+				class="focus-ring flex h-7 shrink-0 cursor-pointer items-center rounded-md border border-zinc-700 px-2.5 text-xs light:border-zinc-300"
+			>
+				Reset
+			</button>
+		{/if}
 	</header>
 
 	<div class="panel-scroll mb-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-0">
@@ -80,26 +89,6 @@
 			]}
 			value={config.theme}
 			onSelect={(theme) => (config.theme = theme)}
-		/>
-
-		<ControlSegmented
-			label="Initial state"
-			options={[
-				{ value: "docked", label: "Docked" },
-				{ value: "open", label: "Open" }
-			]}
-			value={config.initialState}
-			onSelect={(initialState) => (config.initialState = initialState)}
-		/>
-
-		<ControlSegmented
-			label="Dock side"
-			options={[
-				{ value: "left", label: "Left" },
-				{ value: "right", label: "Right" }
-			]}
-			value={config.side}
-			onSelect={(side) => (config.side = side)}
 		/>
 
 		<div class="flex flex-col gap-1.5">
@@ -155,6 +144,26 @@
 			</div>
 		</div>
 
+		<ControlSegmented
+			label="Initial state"
+			options={[
+				{ value: "docked", label: "Docked" },
+				{ value: "open", label: "Open" }
+			]}
+			value={config.initialState}
+			onSelect={(initialState) => (config.initialState = initialState)}
+		/>
+
+		<ControlSegmented
+			label="Initial dock side"
+			options={[
+				{ value: "left", label: "Left" },
+				{ value: "right", label: "Right" }
+			]}
+			value={config.side}
+			onSelect={(side) => (config.side = side)}
+		/>
+
 		<ControlSlider
 			label="Dock vertical"
 			min={ranges.vertical.min}
@@ -181,7 +190,7 @@
 			max={ranges.panelMaxHeight.max}
 			step={ranges.panelMaxHeight.step}
 			value={config.panelMaxHeight}
-			format={(v) => (v === AUTO_PANEL_MAX_HEIGHT ? "Auto" : `${v}px`)}
+			format={(v) => `${v}%`}
 			onCommit={(v) => (config.panelMaxHeight = v)}
 		/>
 
@@ -214,15 +223,6 @@
 			<span class="flex items-center justify-between">
 				<span class="text-xs text-zinc-400 light:text-zinc-600">Your config</span>
 				<span class="flex items-center gap-2">
-					{#if dirty}
-						<button
-							type="button"
-							onclick={reset}
-							class="focus-ring flex h-6 cursor-pointer items-center rounded-md border border-zinc-700 px-2 text-xs light:border-zinc-300"
-						>
-							Reset
-						</button>
-					{/if}
 					<button
 						type="button"
 						aria-label="Copy config"

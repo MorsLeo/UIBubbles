@@ -11,7 +11,7 @@ export interface PlaygroundConfig {
 	side: BubbleSide;
 	vertical: number;
 	panelWidth: number;
-	/** AUTO_PANEL_MAX_HEIGHT means "no cap" — the slider's top end. */
+	/** Panel max height as a percentage of the viewport (10–100). */
 	panelMaxHeight: number;
 	maxBubbles: number;
 }

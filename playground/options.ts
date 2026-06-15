@@ -1,4 +1,3 @@
-import { AUTO_PANEL_MAX_HEIGHT } from "$playground/defaults";
 import type { PlaygroundConfig } from "$playground/types";
 import {
 	bubbleThemes,
@@ -47,7 +46,6 @@ export const toBubblesOptions = (config: PlaygroundConfig): BubblesOptions => ({
 	side: config.side,
 	vertical: config.vertical,
 	panelWidth: config.panelWidth,
-	panelMaxHeight:
-		config.panelMaxHeight === AUTO_PANEL_MAX_HEIGHT ? undefined : config.panelMaxHeight,
+	panelMaxHeight: `${config.panelMaxHeight}%`,
 	maxBubbles: config.maxBubbles
 });

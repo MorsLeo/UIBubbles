@@ -25,9 +25,10 @@ export const configSnippet = (config: PlaygroundConfig): string => {
 	if (config.panelWidth !== defaults.panelWidth) {
 		lines.push(`\tpanelWidth: ${config.panelWidth}`);
 	}
-	if (config.panelMaxHeight !== defaults.panelMaxHeight) {
-		lines.push(`\tpanelMaxHeight: ${config.panelMaxHeight}`);
-	}
+	// Always emitted: the demo caps panel height while the library leaves it
+	// uncapped by default, so omitting it would make the copied snippet render
+	// full-height panels instead of the contained ones on screen.
+	lines.push(`\tpanelMaxHeight: "${config.panelMaxHeight}%"`);
 	if (config.maxBubbles !== defaults.maxBubbles) lines.push(`\tmaxBubbles: ${config.maxBubbles}`);
 
 	if (lines.length === 0) return "createBubbles();";
