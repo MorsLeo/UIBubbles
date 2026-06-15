@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-06-14
+
+### Fixed
+
+- The published package now includes `src/`, so the declaration and source maps in `dist/` resolve
+  instead of pointing at omitted files — a consumer's "go to definition" lands on the real source.
+
+### Added
+
+- `engines` declares the supported Node range (`>=18`).
+
 ## [0.5.0] - 2026-06-13
 
 ### Added
