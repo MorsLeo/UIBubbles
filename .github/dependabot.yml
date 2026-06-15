@@ -1,0 +1,27 @@
+# Keeps pinned dependencies current without auto-merging: Dependabot opens
+# reviewable PRs, CI runs on each, and you merge once it's green. Nothing
+# updates without a look — which is the point of pinning in the first place.
+version: 2
+updates:
+  # The publish workflow pins its actions to commit SHAs; this bumps those
+  # pins (the SHA and the `# v5` comment alongside it) as new releases land,
+  # so the pinning doesn't go stale.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Dev dependencies (Playwright, Vite, svelte-check, …) — grouped into a
+  # single monthly PR to keep the noise down. Nothing here ships to consumers.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "*"
