@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible problem with the library.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. This project is maintained as-is, in spare time — a clear, minimal reproduction is the single biggest factor in whether a bug gets fixed. Reports without one may be closed.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which version of `@hyperplexed/bubbles`?
+      placeholder: e.g. 0.6.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal steps, or a link to a CodeSandbox / StackBlitz / small repo. The smaller, the better.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected vs actual behavior
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser + OS, and the framework if any.
+      placeholder: e.g. Chrome 126 on macOS 14, React 18
+    validations:
+      required: true

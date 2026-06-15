@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Live demo & docs
+    url: https://bubbles.hyperplexed.io
+    about: Try the interactive playground and check the README before filing — many questions are answered there.

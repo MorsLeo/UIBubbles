@@ -1,5 +1,7 @@
 # @hyperplexed/bubbles
 
+[![npm](https://img.shields.io/npm/v/@hyperplexed/bubbles)](https://www.npmjs.com/package/@hyperplexed/bubbles) &nbsp; [![minzipped size](https://deno.bundlejs.com/badge?q=@hyperplexed/bubbles)](https://bundlejs.com/?q=@hyperplexed/bubbles) &nbsp; [![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://www.npmjs.com/package/@hyperplexed/bubbles?activeTab=dependencies) &nbsp; [![license: MIT](https://img.shields.io/npm/l/@hyperplexed/bubbles)](LICENSE)
+
 Android-style app bubbles for the web. Floating, draggable bubbles that snap to screen edges, stack into a group, expand into content panels, and fling to dismiss — an overlay for any website.
 
 ![Bubbles being dragged across the screen, flung to an edge, expanded into panels, and dismissed](https://raw.githubusercontent.com/githyperplexed/bubbles/main/.github/demo.gif)
@@ -267,6 +269,10 @@ bun run build:site # playground build to dist-site/
 ```
 
 The repo holds the library (`src/`) and a Svelte playground (`playground/`); only `dist/` is published.
+
+## Contributing & support
+
+Bubbles is source-available and maintained as-is, by one person, in spare time. Bug reports and ideas are welcome via [issues](https://github.com/githyperplexed/bubbles/issues), and small, focused PRs are too — but there's no guaranteed support or response. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, and report security issues privately per [SECURITY.md](SECURITY.md).
 
 ## License
 
