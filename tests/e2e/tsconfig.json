@@ -1,0 +1,14 @@
+{
+	// Gives editors a TS project for the e2e files so the `$src` alias,
+	// @playwright/test, and the window.bubbles harness globals resolve.
+	// `bun run check` uses the root tsconfig (which excludes tests/), so this
+	// is editor-only and doesn't change the lint/CI gate.
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"types": ["@playwright/test", "vite/client", "node"],
+		"paths": {
+			"$src/*": ["../../src/*"]
+		}
+	},
+	"include": ["**/*.ts"]
+}
