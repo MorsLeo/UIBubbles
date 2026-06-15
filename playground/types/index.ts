@@ -14,6 +14,8 @@ export interface PlaygroundConfig {
 	/** Panel max height as a percentage of the viewport (10–100). */
 	panelMaxHeight: number;
 	maxBubbles: number;
+	/** Fraction of fling speed a bubble keeps when it bounces off the top/bottom gap (0–1). */
+	ricochet: number;
 }
 
 /** A curated accent color in the controls panel. */

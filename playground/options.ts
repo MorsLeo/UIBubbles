@@ -63,5 +63,6 @@ export const toBubblesOptions = (config: PlaygroundConfig): BubblesOptions => ({
 	vertical: config.vertical,
 	panelWidth: config.panelWidth,
 	panelMaxHeight: `${config.panelMaxHeight}%`,
-	maxBubbles: config.maxBubbles
+	maxBubbles: config.maxBubbles,
+	ricochet: config.ricochet
 });

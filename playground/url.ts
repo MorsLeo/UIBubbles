@@ -31,13 +31,16 @@ export const readConfig = (): Partial<PlaygroundConfig> => {
 		["vertical", "vertical", ranges.vertical],
 		["panel-width", "panelWidth", ranges.panelWidth],
 		["panel-max-height", "panelMaxHeight", ranges.panelMaxHeight],
-		["max-bubbles", "maxBubbles", ranges.maxBubbles]
+		["max-bubbles", "maxBubbles", ranges.maxBubbles],
+		["ricochet", "ricochet", ranges.ricochet]
 	] as const;
+	// vertical and ricochet are fractions; the rest round to whole numbers.
+	const fractional = new Set(["vertical", "ricochet"]);
 	for (const [param, key, range] of numbers) {
 		const raw = params.get(param);
 		if (raw === null) continue;
 		const value = parseClamped(raw, range.min, range.max);
-		if (value !== undefined) config[key] = key === "vertical" ? value : Math.round(value);
+		if (value !== undefined) config[key] = fractional.has(key) ? value : Math.round(value);
 	}
 	return config;
 };
@@ -54,6 +57,7 @@ export const writeConfig = (config: PlaygroundConfig): void => {
 		params.set("panel-max-height", `${config.panelMaxHeight}`);
 	}
 	if (config.maxBubbles !== defaults.maxBubbles) params.set("max-bubbles", `${config.maxBubbles}`);
+	if (config.ricochet !== defaults.ricochet) params.set("ricochet", `${config.ricochet}`);
 
 	const query = params.toString();
 	history.replaceState(null, "", query ? `?${query}` : location.pathname);

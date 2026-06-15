@@ -8,7 +8,9 @@ export const ranges = {
 	panelWidth: { min: 280, max: 1600, step: 20 },
 	// Panel max height as a viewport percentage — the library takes "%".
 	panelMaxHeight: { min: 10, max: 100, step: 10 },
-	maxBubbles: { min: 1, max: 5 }
+	maxBubbles: { min: 1, max: 5 },
+	// Bounce restitution: 0 stops a fling dead at the gap, 1 is lossless.
+	ricochet: { min: 0, max: 1, step: 0.05 }
 } as const;
 
 /**
@@ -26,5 +28,6 @@ export const defaults: PlaygroundConfig = {
 	vertical: 0.5,
 	panelWidth: 480,
 	panelMaxHeight: 70,
-	maxBubbles: 5
+	maxBubbles: 5,
+	ricochet: 0.4
 };

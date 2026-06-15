@@ -30,6 +30,7 @@ export const configSnippet = (config: PlaygroundConfig): string => {
 	// full-height panels instead of the contained ones on screen.
 	lines.push(`\tpanelMaxHeight: "${config.panelMaxHeight}%"`);
 	if (config.maxBubbles !== defaults.maxBubbles) lines.push(`\tmaxBubbles: ${config.maxBubbles}`);
+	if (config.ricochet !== defaults.ricochet) lines.push(`\tricochet: ${config.ricochet}`);
 
 	if (lines.length === 0) return "createBubbles();";
 	return `createBubbles({\n${lines.join(",\n")}\n});`;

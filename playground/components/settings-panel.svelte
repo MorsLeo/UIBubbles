@@ -53,6 +53,7 @@
 	// Sliders hand back float-noise like 0.35000000000000003; two decimals
 	// keep the URL and snippet honest.
 	const commitVertical = (value: number) => (config.vertical = Math.round(value * 100) / 100);
+	const commitRicochet = (value: number) => (config.ricochet = Math.round(value * 100) / 100);
 
 	const reset = () => Object.assign(config, defaults);
 </script>
@@ -203,6 +204,16 @@
 			value={config.panelMaxHeight}
 			format={(v) => `${v}%`}
 			onCommit={(v) => (config.panelMaxHeight = v)}
+		/>
+
+		<ControlSlider
+			label="Ricochet"
+			min={ranges.ricochet.min}
+			max={ranges.ricochet.max}
+			step={ranges.ricochet.step}
+			value={config.ricochet}
+			format={(v) => `${Math.round(v * 100)}%`}
+			onCommit={commitRicochet}
 		/>
 
 		<div class="flex items-center justify-between">

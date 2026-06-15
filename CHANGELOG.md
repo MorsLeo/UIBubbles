@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The built-in fallback bubble icon (painted only when a bubble has no `icon`, with `bubbleIcon` as
   its stroke) is now an ellipsis glyph instead of a chat bubble.
+- Trailing bubbles track the leader more tightly during a group drag, and bubbles settle against the
+  edge a touch crisper — the shared chase/snap spring is stiffer and damped to match.
 
 ### Internal
 
@@ -24,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   external links announce that they open a new tab, and the contrast-aware glyph picks its ink by
   WCAG contrast ratio.
 - Added `@axe-core/playwright` and an end-to-end accessibility scan over the playground.
+- Playground now exposes the existing `ricochet` option as a slider, with snippet and shareable-URL
+  round-trip alongside the other controls.
 
 ## [0.5.1] - 2026-06-14
 

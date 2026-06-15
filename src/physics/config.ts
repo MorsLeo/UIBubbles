@@ -23,10 +23,10 @@ export const TOUCH_VELOCITY_BOOST = 1.5;
 export const TOUCH_CHASE_RATE = 1.5;
 
 /** Spring pull toward the wall (1/s²). */
-export const SPRING_STIFFNESS = 170;
+export const SPRING_STIFFNESS = 260;
 
-/** Spring resistance (1/s). Critical damping is 2·√stiffness ≈ 26 — below that overshoots slightly. */
-export const SPRING_DAMPING = 20;
+/** Spring resistance (1/s). Critical damping is 2·√stiffness ≈ 32 — below that overshoots slightly. */
+export const SPRING_DAMPING = 26;
 
 /** Below this speed (px/s) an axis counts as at rest. */
 export const REST_VELOCITY = 10;
