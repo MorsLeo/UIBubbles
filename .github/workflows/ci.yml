@@ -20,3 +20,15 @@ jobs:
       # must import cleanly outside a bundler.
       - name: Verify dist resolves under Node ESM
         run: node --input-type=module -e "await import('./dist/index.js')"
+
+  # Browser tests for the interaction choreography (drag, dismiss, tap-away,
+  # focus) that the happy-dom unit tests can't reach. Separate job so a
+  # browser-engine failure is isolated from the fast unit/type/build gate.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e

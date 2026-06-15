@@ -4,3 +4,6 @@ dist/
 .claude/
 dist-site/
 .wrangler/
+test-results/
+playwright-report/
+/playwright/.cache/

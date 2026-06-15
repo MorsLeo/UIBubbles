@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>bubbles e2e fixture</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				height: 100%;
+			}
+			body {
+				font-family: system-ui, sans-serif;
+			}
+			/* A large empty area to click for tap-away, plus a real focusable
+			   control outside the flock. */
+			#page {
+				min-height: 100vh;
+				padding: 24px;
+				box-sizing: border-box;
+			}
+		</style>
+	</head>
+	<body>
+		<main id="page">
+			<h1>bubbles e2e fixture</h1>
+			<button id="outside" type="button">outside control</button>
+		</main>
+		<script type="module" src="./main.ts"></script>
+	</body>
+</html>
