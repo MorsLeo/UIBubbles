@@ -142,8 +142,8 @@
 	<main class="my-auto flex w-full max-w-152 flex-col items-center gap-3 text-center">
 		<h1 class="text-3xl font-semibold tracking-tight text-white light:text-zinc-900">bubbles</h1>
 		<p class="max-w-md text-sm text-zinc-400 light:text-zinc-600">
-			Android-style app bubbles for any website. Drag them, fling them, stack them — then open the
-			settings bubble to make them yours.
+			Android-style app bubbles for any website. Drag them, fling them, stack them. Open the
+			settings bubble to customize.
 		</p>
 	</main>
 </div>
