@@ -78,7 +78,7 @@ Mounts a bubble. It flies in from the docked side and joins the group. Re-adding
 | ---------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | `id`             | `string`           | Unique id for this bubble (required).                                                                                           |
 | `label`          | `string`           | Accessible name for the bubble and its panel, e.g. `"Chat support"`. Without it the bubble announces as a generic button.       |
-| `icon`           | `HTMLElement`      | Content shown inside the collapsed bubble (an avatar, an SVG, anything). Defaults to a chat glyph.                              |
+| `icon`           | `HTMLElement`      | Content shown inside the collapsed bubble (an avatar, an SVG, anything). Defaults to an ellipsis glyph.                         |
 | `content`        | `HTMLElement`      | Content shown in the expanded panel. Without it the bubble has no panel.                                                        |
 | `panelWidth`     | `number \| string` | Overrides the manager's `panelWidth` for this bubble's panel (px number, or a `"<n>px"` / `"<n>%"` string).                     |
 | `panelMaxHeight` | `number \| string` | Overrides the manager's `panelMaxHeight` for this bubble's panel (px number, or a `"<n>px"` / `"<n>%"` string).                 |
@@ -180,7 +180,7 @@ Every token the library paints with:
 | Token            | Paints                                                               |
 | ---------------- | -------------------------------------------------------------------- |
 | `bubbleSurface`  | Fill of the collapsed bubble circle                                  |
-| `bubbleIcon`     | Stroke of the built-in chat glyph (only when a bubble has no `icon`) |
+| `bubbleIcon`     | Stroke of the built-in ellipsis glyph (only when a bubble has no `icon`) |
 | `bubbleShadow`   | Drop shadow under each bubble                                        |
 | `focusRing`      | Ring marking the focused bubble                                      |
 | `panelSurface`   | Fill of the expanded panel and its caret                             |

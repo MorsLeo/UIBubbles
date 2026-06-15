@@ -28,10 +28,18 @@ export default defineConfig({
 		{ name: "mobile-chrome", testMatch: /mobile\.spec\.ts/, use: { ...devices["Pixel 7"] } },
 		{ name: "mobile-safari", testMatch: /mobile\.spec\.ts/, use: { ...devices["iPhone 14"] } }
 	],
-	webServer: {
-		command: "bunx vite --config tests/e2e/fixture.vite.ts --port 5174 --strictPort",
-		url: "http://localhost:5174",
-		reuseExistingServer: !process.env.CI,
-		timeout: 120_000
-	}
+	webServer: [
+		{
+			command: "bunx vite --config tests/e2e/fixture.vite.ts --port 5174 --strictPort",
+			url: "http://localhost:5174",
+			reuseExistingServer: !process.env.CI,
+			timeout: 120_000
+		},
+		{
+			command: "bunx vite --port 5173 --strictPort",
+			url: "http://localhost:5173",
+			reuseExistingServer: !process.env.CI,
+			timeout: 120_000
+		}
+	]
 });

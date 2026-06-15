@@ -7,6 +7,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A right-click — or any non-primary pointer button — on a bubble no longer activates or drags it.
+  The press falls through to the browser/host page context menu instead of grabbing the bubble.
+
+### Changed
+
+- The built-in fallback bubble icon (painted only when a bubble has no `icon`, with `bubbleIcon` as
+  its stroke) is now an ellipsis glyph instead of a chat bubble.
+
+### Internal
+
+- Playground accessibility: segmented controls and accent swatches are now real radio groups,
+  decorative icons are hidden from assistive tech, shortcut docs use semantic key/action markup,
+  external links announce that they open a new tab, and the contrast-aware glyph picks its ink by
+  WCAG contrast ratio.
+- Added `@axe-core/playwright` and an end-to-end accessibility scan over the playground.
+
 ## [0.5.1] - 2026-06-14
 
 ### Fixed

@@ -11,7 +11,7 @@ export type BubbleThemeName = "dark" | "light";
 export interface BubbleTheme {
 	/** Fill of the collapsed bubble circle. */
 	bubbleSurface: string;
-	/** Stroke of the built-in chat glyph (shown when a bubble has no `icon`). */
+	/** Stroke of the built-in ellipsis glyph (shown when a bubble has no `icon`). */
 	bubbleIcon: string;
 	/** Drop shadow under each bubble. */
 	bubbleShadow: string;

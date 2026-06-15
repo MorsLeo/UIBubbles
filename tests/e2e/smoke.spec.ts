@@ -28,6 +28,21 @@ test("mounts a bubble and expands it on a real tap", async ({ page }) => {
 	await expect(page.locator('[data-panel-content="chat"]')).toBeVisible();
 });
 
+test("right-clicking a bubble does not activate it", async ({ page }) => {
+	await page.evaluate(() => {
+		window.bubbles.create();
+		window.bubbles.add({ id: "chat", label: "Chat", panelText: "Hello from the panel" });
+	});
+
+	const chat = bubble(page, "Chat");
+	await expect(chat).toBeVisible();
+	await settled(page);
+
+	await chat.click({ button: "right" });
+	await expect.poll(() => page.evaluate(() => window.bubbles.state())).toBe("docked");
+	await expect(page.locator('[data-panel-content="chat"]')).toBeHidden();
+});
+
 test("tap-away collapses, and teardown leaks no animation frames", async ({ page }) => {
 	await page.evaluate(() => {
 		window.bubbles.create();

@@ -30,6 +30,8 @@
 			]
 		}
 	];
+
+	const sectionId = (title: string) => `shortcut-${title.toLowerCase().replaceAll(/\W+/g, "-")}`;
 </script>
 
 <div class="flex min-h-0 flex-col font-sans">
@@ -49,15 +51,17 @@
 
 	<div class="panel-scroll mb-4 flex min-h-0 flex-col gap-5 overflow-y-auto p-4 pb-0">
 		{#each sections as section (section.title)}
-			<div class="flex flex-col gap-2">
-				<span class="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+			<section aria-labelledby={sectionId(section.title)} class="flex flex-col gap-2">
+				<h3
+					id={sectionId(section.title)}
+					class="text-xs font-medium tracking-wide text-zinc-500 uppercase"
+				>
 					{section.title}
-				</span>
-				<div class="flex flex-col gap-2.5">
+				</h3>
+				<dl class="flex flex-col gap-2.5">
 					{#each section.shortcuts as shortcut (shortcut.action)}
-						<div class="flex items-center justify-between gap-4">
-							<span class="text-sm text-zinc-300 light:text-zinc-700">{shortcut.action}</span>
-							<span class="flex shrink-0 items-center gap-1">
+						<div class="flex flex-row-reverse items-center justify-between gap-4">
+							<dt class="flex shrink-0 items-center gap-1">
 								{#each shortcut.keys as key (key)}
 									<kbd
 										class="rounded-md border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-xs text-zinc-400 light:border-zinc-300 light:bg-zinc-100 light:text-zinc-600"
@@ -65,11 +69,12 @@
 										{key}
 									</kbd>
 								{/each}
-							</span>
+							</dt>
+							<dd class="text-sm text-zinc-300 light:text-zinc-700">{shortcut.action}</dd>
 						</div>
 					{/each}
-				</div>
-			</div>
+				</dl>
+			</section>
 		{/each}
 	</div>
 </div>

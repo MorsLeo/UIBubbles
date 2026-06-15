@@ -17,6 +17,10 @@ export const makeDraggable = (
 	let cancelFling: (() => void) | undefined;
 
 	el.addEventListener("pointerdown", (event) => {
+		// Secondary mouse buttons belong to the browser/host page context menu,
+		// not bubble activation or drag.
+		if (event.button !== 0) return;
+
 		// preventDefault keeps the browser from starting text selection or
 		// native drags. It also swallows click-to-focus — restored on tap
 		// below, not here: focusing on pointerdown would ring every grab,

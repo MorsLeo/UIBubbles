@@ -15,9 +15,9 @@ export default defineConfig({
 			$playground: fileURLToPath(new URL("./playground", import.meta.url))
 		}
 	},
-	// Unit tests are src/**/*.test.ts. The e2e *.spec.ts files run under
-	// Playwright, not vitest, so keep them out of this glob.
+	// Unit tests live under src/ and playground/. The e2e *.spec.ts files run
+	// under Playwright, not vitest, so keep them out of this glob.
 	test: {
-		include: ["src/**/*.test.ts"]
+		include: ["src/**/*.test.ts", "playground/**/*.test.ts"]
 	}
 });

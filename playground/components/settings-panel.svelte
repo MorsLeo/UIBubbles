@@ -11,16 +11,16 @@
 	import { configSnippet } from "$playground/snippet";
 	import type { Swatch } from "$playground/types";
 
-	// White and black included on purpose: the contrast-aware glyph keeps
-	// them readable on either theme. The rest ride the Tailwind palette
-	// (violet-600, sky-500, emerald-500, amber-500, rose-500).
+	// White and dark included on purpose: the contrast-aware glyph keeps
+	// them readable on either theme. The rest ride the Tailwind palette,
+	// choosing dark enough steps for the white glyph to clear 3:1.
 	const swatches: Swatch[] = [
 		{ name: "White", hex: "ffffff" },
-		{ name: "Black", hex: "000000" },
+		{ name: "Dark", hex: "1c1c1e" },
 		{ name: "Violet", hex: "7c3aed" },
-		{ name: "Sky", hex: "0ea5e9" },
-		{ name: "Emerald", hex: "10b981" },
-		{ name: "Amber", hex: "f59e0b" },
+		{ name: "Sky", hex: "0284c7" },
+		{ name: "Emerald", hex: "059669" },
+		{ name: "Amber", hex: "d97706" },
 		{ name: "Rose", hex: "f43f5e" }
 	];
 
@@ -91,35 +91,46 @@
 			onSelect={(theme) => (config.theme = theme)}
 		/>
 
-		<div class="flex flex-col gap-1.5">
-			<span class="text-xs text-zinc-400 light:text-zinc-600">Accent</span>
+		<fieldset class="flex flex-col gap-1.5">
+			<legend class="text-xs text-zinc-400 light:text-zinc-600">Accent</legend>
 			<div class="flex flex-wrap items-center gap-2">
 				<!-- The "no accent" reset: clears the override so the preset's
 				     own surfaces apply and the snippet drops its colors line. -->
-				<button
-					type="button"
-					aria-label="No accent"
-					aria-pressed={config.color === undefined}
-					class="focus-ring flex size-6 cursor-pointer items-center justify-center rounded-full border border-zinc-600 text-zinc-500 light:border-zinc-400 {swatchRing(
+				<label
+					class="relative flex size-6 cursor-pointer items-center justify-center rounded-full border border-zinc-600 text-zinc-500 has-focus-visible:ring-2 has-focus-visible:ring-zinc-500 has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-black light:border-zinc-400 light:has-focus-visible:ring-zinc-400 light:has-focus-visible:ring-offset-white {swatchRing(
 						config.color === undefined
 					)}"
-					onclick={() => (config.color = undefined)}
 				>
+					<input
+						type="radio"
+						name="accent"
+						value="none"
+						checked={config.color === undefined}
+						onchange={() => (config.color = undefined)}
+						class="sr-only"
+					/>
+					<span class="sr-only">No accent</span>
 					<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
 						<line x1="5" y1="19" x2="19" y2="5" stroke="currentColor" stroke-width="2" />
 					</svg>
-				</button>
+				</label>
 				{#each swatches as swatch (swatch.hex)}
-					<button
-						type="button"
-						aria-label={swatch.name}
-						aria-pressed={config.color === swatch.hex}
-						onclick={() => (config.color = swatch.hex)}
+					<label
 						style="background-color: #{swatch.hex}"
-						class="focus-ring size-6 cursor-pointer rounded-full border border-white/15 light:border-black/15 {swatchRing(
+						class="relative size-6 cursor-pointer rounded-full border border-white/15 has-focus-visible:ring-2 has-focus-visible:ring-zinc-500 has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-black light:border-black/15 light:has-focus-visible:ring-zinc-400 light:has-focus-visible:ring-offset-white {swatchRing(
 							config.color === swatch.hex
 						)}"
-					></button>
+					>
+						<input
+							type="radio"
+							name="accent"
+							value={swatch.hex}
+							checked={config.color === swatch.hex}
+							onchange={() => (config.color = swatch.hex)}
+							class="sr-only"
+						/>
+						<span class="sr-only">{swatch.name}</span>
+					</label>
 				{/each}
 				<!-- Custom picker, dressed as another swatch: a rainbow circle
 				     (Tailwind palette hues, blended smoothly — hard stops read
@@ -142,7 +153,7 @@
 					/>
 				</label>
 			</div>
-		</div>
+		</fieldset>
 
 		<ControlSegmented
 			label="Initial state"

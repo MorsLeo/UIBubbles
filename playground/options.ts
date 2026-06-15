@@ -7,17 +7,33 @@ import {
 } from "$src/index";
 import { MediaQuery } from "svelte/reactivity";
 
-/**
- * Black or white, whichever reads against the accent — so white and
- * black themselves work as accents. The threshold leans white: saturated
- * hues like amber sit mid-luminance and look better with white ink.
- */
-export const contrastIcon = (hex: string): string => {
+const channelToLinear = (channel: number): number => {
+	const normalized = channel / 255;
+	return normalized <= 0.03928
+		? normalized / 12.92
+		: ((normalized + 0.055) / 1.055) ** 2.4;
+};
+
+const relativeLuminance = (hex: string): number => {
 	const r = parseInt(hex.slice(0, 2), 16);
 	const g = parseInt(hex.slice(2, 4), 16);
 	const b = parseInt(hex.slice(4, 6), 16);
-	const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-	return luminance > 0.7 ? "#000000" : "#ffffff";
+	return 0.2126 * channelToLinear(r) + 0.7152 * channelToLinear(g) + 0.0722 * channelToLinear(b);
+};
+
+const contrastRatio = (a: string, b: string): number => {
+	const l1 = relativeLuminance(a);
+	const l2 = relativeLuminance(b);
+	return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+};
+
+/**
+ * White is the intended accent glyph treatment. Curated accents are dark
+ * enough for it; very light custom colors swap to dark ink instead.
+ */
+export const contrastIcon = (hex: string): string => {
+	const white = "ffffff";
+	return contrastRatio(hex, white) >= 3 ? "#ffffff" : "#000000";
 };
 
 /** The accent recolors the bubble surfaces; the glyph takes the contrasting ink. */

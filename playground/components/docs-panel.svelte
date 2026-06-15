@@ -5,12 +5,18 @@
 
 	// The panel renders the actual README — one source of truth. Relative
 	// repo links resolve to GitHub; external links open a new tab.
+	const externalLinkNote = '<span class="sr-only"> (opens in new tab)</span>';
+
 	const html = (marked.parse(readme, { async: false }) as string)
 		.replaceAll(
 			'href="LICENSE"',
 			'href="https://github.com/githyperplexed/bubbles/blob/main/LICENSE"'
 		)
-		.replaceAll('<a href="http', '<a target="_blank" rel="noreferrer" href="http');
+		.replaceAll('<a href="http', '<a target="_blank" rel="noreferrer" href="http')
+		.replace(
+			/<a target="_blank" rel="noreferrer" href="http[^"]+">([\s\S]*?)<\/a>/g,
+			(anchor) => anchor.replace("</a>", `${externalLinkNote}</a>`)
+		);
 </script>
 
 <div class="flex min-h-0 flex-col font-sans">

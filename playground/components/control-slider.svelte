@@ -26,7 +26,7 @@
 <label class="flex flex-col gap-1.5">
 	<span class="flex items-baseline justify-between text-xs">
 		<span class="text-zinc-400 light:text-zinc-600">{label}</span>
-		<span class="text-zinc-500">{format(shown)}</span>
+		<span class="text-zinc-400 light:text-zinc-600">{format(shown)}</span>
 	</span>
 	<input
 		type="range"

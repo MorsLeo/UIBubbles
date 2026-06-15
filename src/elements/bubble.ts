@@ -50,10 +50,9 @@ export const setBubbleTheme = (el: HTMLElement, theme: BubbleTheme): void => {
 	themeControls.get(el)?.(theme);
 };
 
-// Lucide "message-square", inlined because the library builds with
-// plain tsc — a Vite-style ?raw svg import would ship an unresolvable
-// specifier in dist.
-const createChatIcon = (stroke: string): SVGSVGElement => {
+// Lucide "ellipsis", inlined because the library builds with plain tsc — a
+// Vite-style ?raw svg import would ship an unresolvable specifier in dist.
+const createDefaultIcon = (stroke: string): SVGSVGElement => {
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
 	svg.setAttribute("width", "24");
@@ -64,7 +63,7 @@ const createChatIcon = (stroke: string): SVGSVGElement => {
 	svg.setAttribute("stroke-linecap", "round");
 	svg.setAttribute("stroke-linejoin", "round");
 	svg.innerHTML =
-		'<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />';
+		'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>';
 	return svg;
 };
 
@@ -72,7 +71,7 @@ const createChatIcon = (stroke: string): SVGSVGElement => {
  * The visible circle. Lives inside the positioned element so hover growth
  * is a real size change (always crisp) instead of a transform scale, which
  * blurs the rasterized layer. Shows the consumer's icon, or the default
- * chat glyph when none is given.
+ * ellipsis glyph when none is given.
  */
 const createSurface = (theme: BubbleTheme, icon: Element): HTMLElement => {
 	const surface = document.createElement("div");
@@ -128,7 +127,7 @@ export const createBubbleElement = (
 	el.setAttribute("aria-label", label ?? "Bubble");
 
 	// The fallback glyph is the library's to retheme; a consumer icon isn't.
-	const fallbackIcon = icon ? undefined : createChatIcon(theme.bubbleIcon);
+	const fallbackIcon = icon ? undefined : createDefaultIcon(theme.bubbleIcon);
 	const surface = createSurface(theme, icon ?? fallbackIcon!);
 	el.appendChild(surface);
 
