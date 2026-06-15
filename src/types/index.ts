@@ -95,6 +95,16 @@ export interface ResolvedBubblesOptions {
 	initialState: BubblesState;
 }
 
+/**
+ * A bubble's icon or panel content. Either a ready `HTMLElement`, or a
+ * render callback handed a fresh host element to populate — return a
+ * teardown (e.g. a framework `unmount`) and the manager runs it when the
+ * bubble is removed, dismissed, or the manager is destroyed. The callback
+ * form spares framework consumers from creating a host element and
+ * tracking the unmount themselves.
+ */
+export type BubbleSlot = HTMLElement | ((host: HTMLElement) => void | (() => void));
+
 export interface BubbleOptions {
 	/** Unique id for this bubble. */
 	id: string;
@@ -104,10 +114,17 @@ export interface BubbleOptions {
 	 * announces as a generic button.
 	 */
 	label?: string;
-	/** Content shown inside the collapsed bubble (e.g. an avatar). */
-	icon?: HTMLElement;
-	/** Content shown in the expanded panel. */
-	content?: HTMLElement;
+	/**
+	 * Content shown inside the collapsed bubble (e.g. an avatar) — an
+	 * element or a render callback (see `BubbleSlot`). Defaults to an
+	 * ellipsis glyph.
+	 */
+	icon?: BubbleSlot;
+	/**
+	 * Content shown in the expanded panel — an element or a render callback
+	 * (see `BubbleSlot`). Without it the bubble has no panel.
+	 */
+	content?: BubbleSlot;
 	/** Overrides the manager's `panelWidth` for this bubble's panel. */
 	panelWidth?: PanelLength;
 	/** Overrides the manager's `panelMaxHeight` for this bubble's panel. */
@@ -183,6 +200,8 @@ export interface BubbleInstance {
 	panelMaxHeight?: PanelLength;
 	/** Consumer callback for user-initiated dismissal. */
 	onDismiss?: () => void;
+	/** Teardowns from render-callback slots (icon, content); run on removal. */
+	teardowns?: Array<() => void>;
 }
 
 /** The repaintable parts of a panel's look. */

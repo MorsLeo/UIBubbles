@@ -7,6 +7,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `icon` and `content` now also accept a render callback — `(host) => teardown` — alongside an
+  `HTMLElement`. The callback is handed a host element to populate and may return a cleanup that the
+  manager runs when the bubble is removed or the manager is destroyed, so framework consumers
+  (Svelte `mount`/`unmount`, React `createRoot`) no longer create a host element or track the
+  unmount themselves. Passing an `HTMLElement` is unchanged. Exposes a `BubbleSlot` type.
+
 ## [0.6.0] - 2026-06-15
 
 ### Fixed

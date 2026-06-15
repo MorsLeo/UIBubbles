@@ -4,6 +4,7 @@ import { createBubbleGroup } from "$src/behaviors/group";
 import { makeKeyInteractive } from "$src/behaviors/keyboard";
 import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
 import { createPanel } from "$src/elements/panel";
+import { resolveSlot } from "$src/elements/slot";
 import { resolveOptions } from "$src/options";
 import { assertPanelLength } from "$src/panel-length";
 import { resolveTheme, systemThemeName } from "$src/theme";
@@ -25,6 +26,7 @@ export type {
 	BubbleOptions,
 	BubbleRemoveReason,
 	BubbleSide,
+	BubbleSlot,
 	BubblesOptions,
 	BubblesState,
 	BubbleTheme,
@@ -151,6 +153,10 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 
 		bubble.panel?.destroy();
 		bubble.el.remove();
+		// Mirror the documented manual teardown order — library DOM goes, then
+		// the consumer's render-callback cleanup (a framework unmount of the
+		// now-detached icon/content) runs.
+		for (const teardown of bubble.teardowns ?? []) teardown();
 		bubbles.delete(id);
 		retiring.delete(id);
 		group?.removeMember(id);
@@ -245,14 +251,22 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			if (bubbles.size - retiring.size >= config.maxBubbles) return false;
 			const bubbleGroup = ensureGroup();
 
+			// A slot is a ready element or a render callback; resolve each to an
+			// element plus an optional teardown the manager runs on removal.
+			const icon = resolveSlot(options.icon);
+			const content = resolveSlot(options.content);
+			const teardowns = [icon.teardown, content.teardown].filter(
+				(teardown): teardown is () => void => teardown !== undefined
+			);
+
 			// The bubble mounts before its panel so tab order flows bubble →
 			// panel content (createPanel appends to the body itself).
-			const el = createBubbleElement(themeTokens(), options.icon, options.label);
+			const el = createBubbleElement(themeTokens(), icon.el, options.label);
 			document.body.appendChild(el);
 
 			const panelId = `bubble-panel-${options.id}`;
-			const panel = options.content
-				? createPanel(() => bubbleGroup.attachPoint(), el, options.content, {
+			const panel = content.el
+				? createPanel(() => bubbleGroup.attachPoint(), el, content.el, {
 						id: panelId,
 						label: options.label,
 						appearance: panelAppearance(options),
@@ -288,7 +302,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				panel,
 				panelWidth: options.panelWidth,
 				panelMaxHeight: options.panelMaxHeight,
-				onDismiss: options.onDismiss
+				onDismiss: options.onDismiss,
+				teardowns
 			});
 			occurrences.push({ event: "add", detail: { id: options.id } });
 			scheduleFlush();

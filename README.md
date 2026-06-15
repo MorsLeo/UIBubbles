@@ -196,7 +196,7 @@ Inside the panel, `content` is your element — style it however you like; only 
 
 ## Icons and content
 
-Both `icon` and `content` are plain `HTMLElement`s, which keeps the library framework-agnostic. Vanilla:
+Both `icon` and `content` are plain `HTMLElement`s, which keeps the library framework-agnostic. The bubble surface centers whatever you pass, so an icon only needs its own size — no flex or centering wrapper. Vanilla:
 
 ```ts
 const icon = document.createElement("img");
@@ -204,15 +204,22 @@ icon.src = "/avatar.png";
 icon.style.cssText = "width: 100%; height: 100%; border-radius: 50%; object-fit: cover;";
 ```
 
-From a framework, render into a detached element and pass it. Svelte 5:
+(The `100%` above makes the avatar _fill_ the circle; a smaller glyph can drop it and sit centered at its natural size.)
+
+From a framework, `icon` and `content` also accept a **render callback** — it's handed a host element to populate, and whatever cleanup you return runs when the bubble is removed or the manager is destroyed. So the framework's unmount is wired to the bubble's lifecycle for you; no host element to create, no teardown to track. Svelte 5:
 
 ```ts
-import { mount } from "svelte";
+import { mount, unmount } from "svelte";
 import ChatPanel from "./chat-panel.svelte";
 
-const content = document.createElement("div");
-mount(ChatPanel, { target: content });
-manager.add({ id: "chat", label: "Chat", content });
+manager.add({
+	id: "chat",
+	label: "Chat",
+	content: (host) => {
+		const panel = mount(ChatPanel, { target: host });
+		return () => unmount(panel);
+	}
+});
 ```
 
 React:
@@ -220,10 +227,18 @@ React:
 ```tsx
 import { createRoot } from "react-dom/client";
 
-const content = document.createElement("div");
-createRoot(content).render(<ChatPanel />);
-manager.add({ id: "chat", label: "Chat", content });
+manager.add({
+	id: "chat",
+	label: "Chat",
+	content: (host) => {
+		const root = createRoot(host);
+		root.render(<ChatPanel />);
+		return () => root.unmount();
+	}
+});
 ```
+
+(Passing a ready `HTMLElement` still works — use that when you own the element's lifecycle yourself.)
 
 The panel surface handles clipping, rounding, and the height constraint; give your content its own scrolling regions rather than relying on an outer scrollbar.
 
