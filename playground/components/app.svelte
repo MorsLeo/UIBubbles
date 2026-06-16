@@ -36,6 +36,23 @@
 	// they need no handler here.
 	manager.on("dismiss", ({ id }) => drop(id));
 
+	// Ctrl+K from anywhere. With a live flock it toggles (manager.toggle(),
+	// the pattern the library expects — it ships no global hotkey of its own,
+	// to never collide with the host page). With every bubble dismissed the
+	// flock is gone from the library, so toggle() would no-op; the demo
+	// re-summons from its own card list instead — same as page load.
+	// preventDefault stops the browser's own Ctrl+K (address-bar search).
+	$effect(() => {
+		const onKeydown = (event: KeyboardEvent) => {
+			if (!event.ctrlKey || event.key.toLowerCase() !== "k") return;
+			event.preventDefault();
+			if (order.length === 0) spawnAll();
+			else manager.toggle();
+		};
+		window.addEventListener("keydown", onKeydown);
+		return () => window.removeEventListener("keydown", onKeydown);
+	});
+
 	// The README panel gets a fixed width — prose needs the room; the rest
 	// ride the configurable panel width. Panel height comes from the settings
 	// max-height slider (a viewport percentage), shared by every panel.
@@ -92,14 +109,17 @@
 		spawn(card);
 	};
 
-	// Boot: every card spawns at load (per initialState — the open row, or
-	// the docked stack), in reverse display order so the first card ends
-	// newest: leftmost in the row, or topmost on the stack. The slice keeps
-	// the boot within the cap.
+	// Every card spawned per initialState (the open row, or the docked stack),
+	// in reverse display order so the first card ends newest: leftmost in the
+	// row, or topmost on the stack. The slice keeps it within the cap. Shared
+	// by boot and the Ctrl+K re-summon of a fully dismissed flock.
+	const spawnAll = () => {
+		for (const card of cards.slice(0, config.maxBubbles).reverse()) spawn(card);
+	};
+
+	// Boot.
 	$effect(() => {
-		untrack(() => {
-			for (const card of cards.slice(0, config.maxBubbles).reverse()) spawn(card);
-		});
+		untrack(spawnAll);
 		return () => manager.destroy();
 	});
 

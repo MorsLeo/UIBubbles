@@ -9,7 +9,10 @@
 	const sections: { title: string; shortcuts: Shortcut[] }[] = [
 		{
 			title: "Anywhere",
-			shortcuts: [{ keys: ["Tab"], action: "Focus the bubbles" }]
+			shortcuts: [
+				{ keys: ["Tab"], action: "Focus the bubbles" },
+				{ keys: ["Ctrl", "K"], action: "Toggle the flock" }
+			]
 		},
 		{
 			title: "Docked stack",
