@@ -19,7 +19,7 @@
 </script>
 
 <div class="flex min-h-0 flex-col font-sans">
-	<header class="flex items-center gap-3 border-b border-zinc-800 p-3 light:border-zinc-200">
+	<div class="flex items-center gap-3 border-b border-zinc-800 p-3 light:border-zinc-200">
 		<div
 			class="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-white light:bg-black/5 light:text-zinc-900"
 		>
@@ -29,7 +29,7 @@
 			<span class="truncate text-sm font-semibold">Docs</span>
 			<span class="truncate text-xs text-zinc-400 light:text-zinc-600"> The README </span>
 		</div>
-	</header>
+	</div>
 	<div class="docs-content panel-scroll mb-4 min-h-0 flex-1 overflow-y-auto p-4 pb-0 text-sm">
 		{@html html}
 	</div>

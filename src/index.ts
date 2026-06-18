@@ -3,7 +3,6 @@ import { makeDraggable } from "$src/behaviors/drag";
 import { createBubbleGroup } from "$src/behaviors/group";
 import { makeKeyInteractive } from "$src/behaviors/keyboard";
 import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
-import { createGroupOwner, type GroupOwner } from "$src/elements/group-owner";
 import { createLiveRegion } from "$src/elements/live-region";
 import { createPanel } from "$src/elements/panel";
 import { resolveSlot } from "$src/elements/slot";
@@ -136,15 +135,10 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	let zone: DismissZone | undefined;
 	let group: BubbleGroup | undefined;
 
-	// --- Accessibility: live announcements, group semantics, focus return ---
+	// --- Accessibility: live announcements and focus return ---
 
 	const live = createLiveRegion();
 	const labelFor = (id: string) => bubbles.get(id)?.el.getAttribute("aria-label") ?? "Bubble";
-
-	// Each bubble's element id, which the group owner lists in aria-owns.
-	const bubbleElementId = (id: string) => `bubble-${id}`;
-	let groupOwner: GroupOwner | undefined;
-	const syncGroupAria = () => groupOwner?.sync([...bubbles.keys()].map(bubbleElementId));
 
 	// The last element focused outside the flock, so when the flock empties
 	// (the final row bubble deleted) focus returns there instead of stranding
@@ -179,8 +173,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		group = undefined;
 		zone.destroy();
 		zone = undefined;
-		groupOwner?.destroy();
-		groupOwner = undefined;
 		window.removeEventListener("resize", onResize);
 		document.removeEventListener("pointerdown", onDocumentPointerDown, true);
 		document.removeEventListener("focusin", onFocusIn);
@@ -201,7 +193,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		bubbles.delete(id);
 		retiring.delete(id);
 		group?.removeMember(id);
-		syncGroupAria();
 		if (bubbles.size === 0) teardownGroup();
 		occurrences.push({ event: "remove", detail: { id, reason } });
 		scheduleFlush();
@@ -236,7 +227,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		if (group) return group;
 
 		zone = createDismissZone(themeTokens());
-		groupOwner = createGroupOwner();
 
 		group = createBubbleGroup(
 			zone,
@@ -319,7 +309,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			// The bubble mounts before its panel so tab order flows bubble →
 			// panel content (createPanel appends to the body itself).
 			const el = createBubbleElement(themeTokens(), icon.el, options.label);
-			el.id = bubbleElementId(options.id);
 			document.body.appendChild(el);
 
 			const panelId = `bubble-panel-${options.id}`;
@@ -363,7 +352,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				onDismiss: options.onDismiss,
 				teardowns
 			});
-			syncGroupAria();
 			live.announce(`${labelFor(options.id)} added`);
 			occurrences.push({ event: "add", detail: { id: options.id } });
 			scheduleFlush();

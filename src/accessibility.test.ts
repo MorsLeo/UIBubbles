@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 /**
  * Manager-level accessibility behavior in happy-dom: live announcements,
- * the aria-owns group, focus return on empty, and the disclosure panel role.
+ * focus return on empty, and the disclosure panel role.
  * Reduced motion is forced so the choreography settles deterministically.
  */
 
@@ -43,7 +43,6 @@ const bubbleEl = (label: string): HTMLElement => {
 // is the latest announcement.
 const liveText = () =>
 	[...document.querySelectorAll("[aria-live]")].map((node) => node.textContent).join("");
-const groupEl = () => document.querySelector("[role='group']");
 
 let manager: BubbleManager | undefined;
 
@@ -92,39 +91,6 @@ describe("live announcements", () => {
 		bubbleEl("Alpha").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
 		await tick();
 		expect(liveText()).toBe("Alpha dismissed");
-	});
-});
-
-describe("group semantics (aria-owns)", () => {
-	it("owns every bubble and names the group by count", async () => {
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a" });
-		manager.add({ id: "b", label: "b" });
-		await tick();
-
-		expect(groupEl()?.getAttribute("aria-owns")).toBe("bubble-a bubble-b");
-		expect(groupEl()?.getAttribute("aria-label")).toBe("2 bubbles");
-	});
-
-	it("gives each bubble the element id the group owns", async () => {
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a" });
-		await tick();
-		expect(bubbleEl("a").id).toBe("bubble-a");
-	});
-
-	it("updates the ownership list as bubbles leave", async () => {
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a" });
-		manager.add({ id: "b", label: "b" });
-		await tick();
-
-		manager.remove("a");
-		await tick();
-		await tick();
-
-		expect(groupEl()?.getAttribute("aria-owns")).toBe("bubble-b");
-		expect(groupEl()?.getAttribute("aria-label")).toBe("1 bubble");
 	});
 });
 

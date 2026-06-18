@@ -8,7 +8,7 @@ test.describe("playground accessibility", () => {
 		test.skip(testInfo.project.name !== "chromium", "Playground accessibility scans run once.");
 		await page.goto(playgroundUrl);
 		await page.waitForFunction(() =>
-			document.querySelector('[role="dialog"][aria-label="Settings"]')
+			document.querySelector('[role="region"][aria-label="Settings"]')
 		);
 	});
 
@@ -49,7 +49,7 @@ test.describe("playground accessibility", () => {
 		await page
 			.locator('[role="button"][aria-label="Docs"][aria-controls="bubble-panel-docs"]')
 			.click();
-		const externalLinks = page.locator("[role='dialog'][aria-label='Docs'] a[target='_blank']");
+		const externalLinks = page.locator("[role='region'][aria-label='Docs'] a[target='_blank']");
 		await expect(externalLinks.first()).toContainText("opens in new tab");
 	});
 });

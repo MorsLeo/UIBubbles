@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-06-18
+
+### Fixed
+
+- Removed the hidden `aria-owns` bubble group owner so default axe scans no longer flag package
+  consumers for loose hidden content outside landmarks.
+- Playground accessibility scans now target the non-modal panel's `role="region"` and keep panel
+  title bars out of banner landmarks.
+
 ## [0.8.0] - 2026-06-18
 
 ### Added

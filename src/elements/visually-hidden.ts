@@ -1,7 +1,7 @@
 /**
  * Inline style that clips an element out of view while leaving it in the
- * accessibility tree — for the live region and the aria-owns group owner,
- * which must be reachable by assistive tech but never seen.
+ * accessibility tree — for the live region, which must be reachable by
+ * assistive tech but never seen.
  */
 export const visuallyHidden = {
 	position: "absolute",
