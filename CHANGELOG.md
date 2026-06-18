@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-18
+
 ### Added
 
 - Screen-reader announcements through a polite live region: bubbles entering and

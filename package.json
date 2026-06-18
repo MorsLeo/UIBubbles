@@ -1,6 +1,6 @@
 {
 	"name": "@hyperplexed/bubbles",
-	"version": "0.7.0",
+	"version": "0.8.0",
 	"description": "Android-style app bubbles for the web — floating, draggable, expandable overlay bubbles",
 	"author": "Hyperplexed",
 	"repository": {
