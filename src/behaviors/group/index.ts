@@ -587,7 +587,10 @@ export const createBubbleGroup = (
 			const neighbor = row[i + 1] ?? row[i - 1];
 			callbacks.dismissed(id);
 			callbacks.remove(id);
-			neighbor?.el.focus();
+			// The dismissed bubble was the last one — hand focus back out of the
+			// flock rather than stranding it on <body>.
+			if (neighbor) neighbor.el.focus();
+			else callbacks.restoreFocus();
 		},
 
 		toggle() {

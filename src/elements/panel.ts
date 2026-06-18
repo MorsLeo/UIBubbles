@@ -50,14 +50,15 @@ export const createPanel = (
 ): PanelController => {
 	const el = document.createElement("div");
 
-	// A non-modal dialog: the host page stays reachable behind it. The
-	// owning bubble points here via aria-controls.
+	// A disclosure region, not a dialog: the owning bubble toggles it via
+	// aria-expanded/aria-controls and focus moves freely in and out (non-modal).
+	// "region" matches that behavior, where "dialog" would imply a focus trap.
 	el.id = options.id;
-	el.setAttribute("role", "dialog");
+	el.setAttribute("role", "region");
 	if (options.label) el.setAttribute("aria-label", options.label);
 
 	// Escape from anywhere inside the panel collapses the group, same as
-	// from the bubbles themselves (dialog convention).
+	// from the bubbles themselves (disclosure convention).
 	el.addEventListener("keydown", (event) => {
 		if (event.key !== "Escape") return;
 		event.preventDefault();

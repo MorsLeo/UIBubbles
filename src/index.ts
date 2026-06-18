@@ -3,6 +3,8 @@ import { makeDraggable } from "$src/behaviors/drag";
 import { createBubbleGroup } from "$src/behaviors/group";
 import { makeKeyInteractive } from "$src/behaviors/keyboard";
 import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
+import { createGroupOwner, type GroupOwner } from "$src/elements/group-owner";
+import { createLiveRegion } from "$src/elements/live-region";
 import { createPanel } from "$src/elements/panel";
 import { resolveSlot } from "$src/elements/slot";
 import { resolveOptions } from "$src/options";
@@ -84,6 +86,13 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		if (state !== lastState) {
 			lastState = state;
 			deliver("statechange", { state });
+			// Add/dismiss are announced at their call sites (while the bubble
+			// still exists to read a label from); expand/collapse is a pure
+			// state diff, announced here with the live item count.
+			const count = bubbles.size - retiring.size;
+			if (state === "open")
+				live.announce(`Bubbles expanded, ${count} ${count === 1 ? "item" : "items"}`);
+			else if (count > 0) live.announce("Bubbles collapsed");
 		}
 		const active = group?.active();
 		if (active !== lastActive) {
@@ -127,6 +136,35 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	let zone: DismissZone | undefined;
 	let group: BubbleGroup | undefined;
 
+	// --- Accessibility: live announcements, group semantics, focus return ---
+
+	const live = createLiveRegion();
+	const labelFor = (id: string) => bubbles.get(id)?.el.getAttribute("aria-label") ?? "Bubble";
+
+	// Each bubble's element id, which the group owner lists in aria-owns.
+	const bubbleElementId = (id: string) => `bubble-${id}`;
+	let groupOwner: GroupOwner | undefined;
+	const syncGroupAria = () => groupOwner?.sync([...bubbles.keys()].map(bubbleElementId));
+
+	// The last element focused outside the flock, so when the flock empties
+	// (the final row bubble deleted) focus returns there instead of stranding
+	// on <body>; a registered trigger is the fallback.
+	let returnFocusEl: HTMLElement | null = null;
+	const isInFlock = (node: Node | null): boolean =>
+		node !== null &&
+		[...bubbles.values()].some((b) => b.el.contains(node) || b.panel?.contains(node) === true);
+	const onFocusIn = (event: FocusEvent) => {
+		if (!isInFlock(event.target as Node | null)) returnFocusEl = event.target as HTMLElement | null;
+	};
+	const restoreFocus = () => {
+		for (const candidate of [returnFocusEl, ...triggers]) {
+			if (candidate?.isConnected) {
+				candidate.focus();
+				if (document.activeElement === candidate) return;
+			}
+		}
+	};
+
 	// Repaints an auto-themed overlay when the OS preference flips;
 	// registered only while the overlay exists.
 	let scheme: MediaQueryList | undefined;
@@ -141,8 +179,11 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		group = undefined;
 		zone.destroy();
 		zone = undefined;
+		groupOwner?.destroy();
+		groupOwner = undefined;
 		window.removeEventListener("resize", onResize);
 		document.removeEventListener("pointerdown", onDocumentPointerDown, true);
+		document.removeEventListener("focusin", onFocusIn);
 		scheme?.removeEventListener("change", onSchemeChange);
 		scheme = undefined;
 	};
@@ -160,6 +201,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		bubbles.delete(id);
 		retiring.delete(id);
 		group?.removeMember(id);
+		syncGroupAria();
 		if (bubbles.size === 0) teardownGroup();
 		occurrences.push({ event: "remove", detail: { id, reason } });
 		scheduleFlush();
@@ -194,6 +236,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		if (group) return group;
 
 		zone = createDismissZone(themeTokens());
+		groupOwner = createGroupOwner();
+
 		group = createBubbleGroup(
 			zone,
 			{
@@ -206,10 +250,14 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				// once it's gone.
 				dismissed: (id) => {
 					if (!bubbles.has(id)) return;
+					// Announced here, at commit, while the bubble is still mounted —
+					// by flush time the user-removal has already deleted it.
+					live.announce(`${labelFor(id)} dismissed`);
 					occurrences.push({ event: "dismiss", detail: { id } });
 					scheduleFlush();
 				},
-				onChange: scheduleFlush
+				onChange: scheduleFlush,
+				restoreFocus
 			},
 			{
 				side: config.side,
@@ -220,6 +268,15 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		);
 		window.addEventListener("resize", onResize);
 		document.addEventListener("pointerdown", onDocumentPointerDown, true);
+		document.addEventListener("focusin", onFocusIn);
+
+		// Seed the return target with focus that predates the listener: a flock
+		// opened over an already-focused control (the listener attaches here, on
+		// the first add) still hands focus back when it empties.
+		const preexisting = document.activeElement;
+		if (preexisting instanceof HTMLElement && preexisting !== document.body && !isInFlock(preexisting))
+			returnFocusEl = preexisting;
+
 		scheme = window.matchMedia("(prefers-color-scheme: dark)");
 		scheme.addEventListener("change", onSchemeChange);
 		return group;
@@ -262,6 +319,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			// The bubble mounts before its panel so tab order flows bubble →
 			// panel content (createPanel appends to the body itself).
 			const el = createBubbleElement(themeTokens(), icon.el, options.label);
+			el.id = bubbleElementId(options.id);
 			document.body.appendChild(el);
 
 			const panelId = `bubble-panel-${options.id}`;
@@ -305,6 +363,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				onDismiss: options.onDismiss,
 				teardowns
 			});
+			syncGroupAria();
+			live.announce(`${labelFor(options.id)} added`);
 			occurrences.push({ event: "add", detail: { id: options.id } });
 			scheduleFlush();
 			return true;
@@ -352,6 +412,7 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			for (const id of [...bubbles.keys()]) removeById(id, "programmatic");
 			// Covers the never-added case; removeById tears down otherwise.
 			teardownGroup();
+			live.destroy();
 		}
 	};
 };

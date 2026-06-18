@@ -365,6 +365,12 @@ export interface GroupCallbacks {
 	 * reverting state() to the configured initialState).
 	 */
 	onChange(): void;
+	/**
+	 * Move focus to a sensible target when the flock empties with no member
+	 * left to take it (the last open-row bubble was deleted) — the element
+	 * focused before the flock was engaged, or a registered trigger.
+	 */
+	restoreFocus(): void;
 }
 
 /**

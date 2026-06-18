@@ -7,6 +7,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Screen-reader announcements through a polite live region: bubbles entering and
+  leaving, and the flock expanding (with its item count) or collapsing.
+- Group semantics — a hidden `role="group"` owns every bubble via `aria-owns`,
+  so assistive tech reads the flock as one named set, named by its count. It
+  touches the accessibility tree only; bubble position, z-order, and drag are
+  unaffected.
+
+### Changed
+
+- The expanded panel is now `role="region"` (a disclosure) rather than
+  `role="dialog"`. It is non-modal, with focus moving freely in and out — which
+  the region role matches and the dialog role (implying a focus trap) did not.
+
+### Fixed
+
+- Deleting the last bubble in the open row no longer strands keyboard focus on
+  `<body>`; focus returns to the element focused before the flock was engaged,
+  or to a registered trigger.
+
 ## [0.7.0] - 2026-06-15
 
 ### Added
