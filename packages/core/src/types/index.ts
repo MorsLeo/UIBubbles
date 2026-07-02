@@ -241,7 +241,9 @@ export interface BubbleManager {
 	 * live bubbles). `side` and `vertical` describe where a fresh flock
 	 * docks, so they take effect once every bubble is gone and the next
 	 * one enters. Omitted options return to their defaults. Elements the
-	 * consumer supplied (icon, content) are theirs to restyle.
+	 * consumer supplied (icon, content) are theirs to restyle. A call
+	 * that resolves to the applied configuration is a guaranteed no-op,
+	 * so props-driven consumers can call this on every render.
 	 */
 	configure(options: BubblesOptions): void;
 	/**

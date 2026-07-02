@@ -1,7 +1,7 @@
 import { MAX_BUBBLES } from "$src/constants";
 import { assertPanelLength } from "$src/panel-length";
 import { RESTITUTION } from "$src/physics/config";
-import type { BubblesOptions, ResolvedBubblesOptions } from "$src/types";
+import type { BubbleTheme, BubblesOptions, ResolvedBubblesOptions } from "$src/types";
 
 /** Expanded panel width (px) when the consumer doesn't choose one. */
 export const DEFAULT_PANEL_WIDTH = 480;
@@ -23,3 +23,27 @@ export const resolveOptions = (options: BubblesOptions = {}): ResolvedBubblesOpt
 		initialState: options.initialState ?? "docked"
 	};
 };
+
+// An absent overrides object and an empty one paint identically.
+const sameColors = (a: Partial<BubbleTheme> = {}, b: Partial<BubbleTheme> = {}): boolean => {
+	const keys = new Set([...Object.keys(a), ...Object.keys(b)] as Array<keyof BubbleTheme>);
+	for (const key of keys) if (a[key] !== b[key]) return false;
+	return true;
+};
+
+/**
+ * True when two resolved configurations paint and behave identically, so
+ * configure() can skip the repaint. Props-driven consumers (framework
+ * wrappers) call configure() on every render; this makes the unchanged
+ * call free.
+ */
+export const sameOptions = (a: ResolvedBubblesOptions, b: ResolvedBubblesOptions): boolean =>
+	a.theme === b.theme &&
+	a.side === b.side &&
+	a.vertical === b.vertical &&
+	a.panelWidth === b.panelWidth &&
+	a.panelMaxHeight === b.panelMaxHeight &&
+	a.maxBubbles === b.maxBubbles &&
+	a.ricochet === b.ricochet &&
+	a.initialState === b.initialState &&
+	sameColors(a.colors, b.colors);

@@ -11,7 +11,7 @@ export default defineConfig({
 	root: fileURLToPath(new URL("./fixture", import.meta.url)),
 	resolve: {
 		alias: {
-			$src: fileURLToPath(new URL("../../src", import.meta.url))
+			$src: fileURLToPath(new URL("../../packages/core/src", import.meta.url))
 		}
 	}
 });

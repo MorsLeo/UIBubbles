@@ -6,7 +6,7 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"paths": {
-			"$src/*": ["../../src/*"]
+			"$src/*": ["../../packages/core/src/*"]
 		}
 	},
 	"include": ["**/*.ts"]

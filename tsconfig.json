@@ -5,8 +5,10 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"paths": {
-			"$src/*": ["./src/*"],
-			"$playground/*": ["./playground/*"]
+			"$src/*": ["./packages/core/src/*"],
+			"$playground/*": ["./playground/*"],
+			"@hyperplexed/bubbles": ["./packages/core/src/index.ts"],
+			"@hyperplexed/bubbles-svelte": ["./packages/svelte/src/lib/index.ts"]
 		},
 		"types": ["vite/client", "node"],
 		"strict": true,
@@ -15,5 +17,5 @@
 		"skipLibCheck": true,
 		"noEmit": true
 	},
-	"include": ["src", "playground", "vite.config.ts"]
+	"include": ["packages/core/src", "packages/svelte/src", "playground", "vite.config.ts"]
 }

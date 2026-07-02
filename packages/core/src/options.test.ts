@@ -1,5 +1,5 @@
 import { MAX_BUBBLES } from "$src/constants";
-import { DEFAULT_PANEL_WIDTH, resolveOptions } from "$src/options";
+import { DEFAULT_PANEL_WIDTH, resolveOptions, sameOptions } from "$src/options";
 import { RESTITUTION } from "$src/physics/config";
 import { describe, expect, it } from "vitest";
 
@@ -66,5 +66,53 @@ describe("resolveOptions", () => {
 	it("keeps maxBubbles at least 1", () => {
 		expect(resolveOptions({ maxBubbles: 0 }).maxBubbles).toBe(1);
 		expect(resolveOptions({ maxBubbles: -4 }).maxBubbles).toBe(1);
+	});
+});
+
+describe("sameOptions", () => {
+	it("matches two default resolutions", () => {
+		expect(sameOptions(resolveOptions(), resolveOptions())).toBe(true);
+	});
+
+	it("matches when the same choices arrive twice", () => {
+		const options = {
+			theme: "light",
+			side: "left",
+			vertical: 0.25,
+			panelWidth: 420,
+			maxBubbles: 3
+		} as const;
+		expect(sameOptions(resolveOptions(options), resolveOptions({ ...options }))).toBe(true);
+	});
+
+	it("differs on any scalar change", () => {
+		const base = resolveOptions();
+		expect(sameOptions(base, resolveOptions({ theme: "light" }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ side: "left" }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ vertical: 0.2 }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ panelWidth: 300 }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ panelMaxHeight: 400 }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ maxBubbles: 2 }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ ricochet: 0.9 }))).toBe(false);
+		expect(sameOptions(base, resolveOptions({ initialState: "open" }))).toBe(false);
+	});
+
+	it("compares color overrides by value, treating absent and empty alike", () => {
+		expect(sameOptions(resolveOptions({ colors: {} }), resolveOptions())).toBe(true);
+		expect(
+			sameOptions(
+				resolveOptions({ colors: { bubbleSurface: "#111" } }),
+				resolveOptions({ colors: { bubbleSurface: "#111" } })
+			)
+		).toBe(true);
+		expect(
+			sameOptions(
+				resolveOptions({ colors: { bubbleSurface: "#111" } }),
+				resolveOptions({ colors: { bubbleSurface: "#222" } })
+			)
+		).toBe(false);
+		expect(sameOptions(resolveOptions({ colors: { bubbleSurface: "#111" } }), resolveOptions())).toBe(
+			false
+		);
 	});
 });

@@ -18,8 +18,8 @@ jobs:
       # Guards the published artifact: SSR frameworks (Vite SSR, Next)
       # load externalized deps through Node's resolver, so the build
       # must import cleanly outside a bundler.
-      - name: Verify dist resolves under Node ESM
-        run: node --input-type=module -e "await import('./dist/index.js')"
+      - name: Verify core dist resolves under Node ESM
+        run: node --input-type=module -e "await import('./packages/core/dist/index.js')"
 
   # Browser tests for the interaction choreography (drag, dismiss, tap-away,
   # focus) that the happy-dom unit tests can't reach. Separate job so a

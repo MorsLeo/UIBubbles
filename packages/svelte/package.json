@@ -1,0 +1,61 @@
+{
+	"name": "@hyperplexed/bubbles-svelte",
+	"version": "0.1.0",
+	"description": "Svelte 5 wrapper for @hyperplexed/bubbles — declarative floating, draggable, expandable overlay bubbles",
+	"author": "Hyperplexed",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/githyperplexed/bubbles.git",
+		"directory": "packages/svelte"
+	},
+	"homepage": "https://bubbles.hyperplexed.io",
+	"bugs": "https://github.com/githyperplexed/bubbles/issues",
+	"type": "module",
+	"svelte": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"svelte": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"src/lib"
+	],
+	"sideEffects": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "rimraf dist && svelte-package -i src/lib -o dist",
+		"prepublishOnly": "bun run --cwd ../.. check && bun run --cwd ../.. test && bun run build"
+	},
+	"keywords": [
+		"bubbles",
+		"chat-heads",
+		"floating",
+		"overlay",
+		"ui",
+		"draggable",
+		"widget",
+		"svelte"
+	],
+	"license": "MIT",
+	"engines": {
+		"node": ">=18"
+	},
+	"dependencies": {
+		"@hyperplexed/bubbles": "^0.8.1"
+	},
+	"peerDependencies": {
+		"svelte": "^5.0.0"
+	},
+	"devDependencies": {
+		"@sveltejs/package": "^2.3.7",
+		"rimraf": "^6.1.3",
+		"svelte": "^5.56.3",
+		"typescript": "^6.0.3"
+	}
+}

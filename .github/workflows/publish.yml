@@ -35,3 +35,9 @@ jobs:
       - run: bun run test
       - run: bun run build
       - run: npm publish --provenance --access public
+        working-directory: packages/core
+      # @hyperplexed/bubbles-svelte. Requires its own npm Trusted Publishing
+      # config (set per-package on npmjs.com) plus a manual first publish to
+      # create the package — OIDC can't publish a package's initial version.
+      - run: npm publish --provenance --access public
+        working-directory: packages/svelte

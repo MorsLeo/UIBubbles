@@ -6,7 +6,7 @@ import { createBubbleElement, setBubbleTheme } from "$src/elements/bubble";
 import { createLiveRegion } from "$src/elements/live-region";
 import { createPanel } from "$src/elements/panel";
 import { resolveSlot } from "$src/elements/slot";
-import { resolveOptions } from "$src/options";
+import { resolveOptions, sameOptions } from "$src/options";
 import { assertPanelLength } from "$src/panel-length";
 import { resolveTheme, systemThemeName } from "$src/theme";
 import type {
@@ -367,7 +367,12 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			} else removeById(id, "programmatic");
 		},
 		configure(options) {
-			config = resolveOptions(options);
+			const next = resolveOptions(options);
+			// A configuration that resolves to what's already applied is a
+			// no-op — so consumers that mirror props (framework wrappers)
+			// can call this unconditionally.
+			if (sameOptions(config, next)) return;
+			config = next;
 			repaint();
 			// While empty, state() reads the configured initialState — a
 			// changed one is a state change like any other.

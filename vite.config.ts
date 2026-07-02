@@ -34,14 +34,29 @@ export default defineConfig(({ mode }) => {
 		},
 		resolve: {
 			alias: {
-				$src: fileURLToPath(new URL("./src", import.meta.url)),
+				// Bare package names resolve to workspace sources, so the site,
+				// the wrapper, and the tests all run against live code — no
+				// dist build required for dev.
+				"@hyperplexed/bubbles": fileURLToPath(
+					new URL("./packages/core/src/index.ts", import.meta.url)
+				),
+				$src: fileURLToPath(new URL("./packages/core/src", import.meta.url)),
 				$playground: fileURLToPath(new URL("./playground", import.meta.url))
-			}
+			},
+			// Vitest resolves through Node conditions, which hands the wrapper
+			// tests Svelte's server build (mount() unavailable). The tests run
+			// in happy-dom, a browser as far as Svelte is concerned.
+			...(process.env.VITEST ? { conditions: ["browser"] } : {})
 		},
-		// Unit tests live under src/ and playground/. The e2e *.spec.ts files run
-		// under Playwright, not vitest, so keep them out of this glob.
+		// Unit tests live under the packages and playground/. The e2e *.spec.ts
+		// files run under Playwright, not vitest, so keep them out of this glob.
+		// (*.test.svelte.ts is the runes-enabled test flavor.)
 		test: {
-			include: ["src/**/*.test.ts", "playground/**/*.test.ts"]
+			include: [
+				"packages/*/src/**/*.test.ts",
+				"packages/*/src/**/*.test.svelte.ts",
+				"playground/**/*.test.ts"
+			]
 		}
 	};
 });

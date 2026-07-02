@@ -1,0 +1,12 @@
+{
+	// Editor-only project for files opened in isolation; `bun run check`
+	// uses the root tsconfig, which includes this package with the same
+	// source-level mapping of the core package.
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"paths": {
+			"@hyperplexed/bubbles": ["../core/src/index.ts"]
+		}
+	},
+	"include": ["src"]
+}
