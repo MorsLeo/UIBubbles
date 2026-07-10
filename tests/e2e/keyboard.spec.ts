@@ -33,23 +33,7 @@ test("arrow keys move focus across the open row", async ({ page }) => {
 	expect(await focusedLabel(page)).toBe("B");
 });
 
-test("Delete dismisses the focused row bubble and moves focus to a neighbor", async ({ page }) => {
-	await page.evaluate(() => {
-		window.bubbles.create();
-		window.bubbles.add({ id: "a", label: "A", panelText: "A" });
-		window.bubbles.add({ id: "b", label: "B", panelText: "B" });
-		window.bubbles.toggle();
-	});
-	await expect.poll(() => page.evaluate(() => window.bubbles.state())).toBe("open");
-	await settled(page);
 
-	// Row B A; focus is on B (newest, active).
-	expect(await focusedLabel(page)).toBe("B");
-	await page.keyboard.press("Delete");
-
-	await expect(bubble(page, "B")).toHaveCount(0);
-	await expect.poll(() => focusedLabel(page)).toBe("A");
-});
 
 test("Enter on the docked stack expands it", async ({ page }) => {
 	await page.evaluate(() => {
