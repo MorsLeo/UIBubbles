@@ -26,17 +26,26 @@ jobs:
           npm run build --prefix packages/core
 
       - name: Push built package to npm branch
+        # Commits on top of the existing npm branch (no force-push) so commits
+        # pinned by consumer lockfiles stay reachable forever.
         run: |
           set -euo pipefail
-          STAGE="$(mktemp -d)"
-          cp -R packages/core/package.json packages/core/dist packages/core/src \
-            packages/core/LICENSE packages/core/README.md packages/core/CHANGELOG.md "$STAGE"/
-          cd "$STAGE"
-          git init -b npm
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          WT="$(mktemp -d)/npm-branch"
+          if git fetch origin npm; then
+            git worktree add -B npm "$WT" origin/npm
+          else
+            git worktree add --orphan -b npm "$WT"
+          fi
+          cd "$WT"
+          find . -mindepth 1 -maxdepth 1 -not -name .git -exec rm -rf {} +
+          cp -R "$GITHUB_WORKSPACE"/packages/core/package.json \
+            "$GITHUB_WORKSPACE"/packages/core/dist \
+            "$GITHUB_WORKSPACE"/packages/core/src \
+            "$GITHUB_WORKSPACE"/packages/core/LICENSE \
+            "$GITHUB_WORKSPACE"/packages/core/README.md \
+            "$GITHUB_WORKSPACE"/packages/core/CHANGELOG.md .
           git add -A
-          git commit -m "build: packages/core @ ${GITHUB_SHA}"
-          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" npm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git diff --cached --quiet || git commit -m "build: packages/core @ ${GITHUB_SHA}"
+          git push origin npm
