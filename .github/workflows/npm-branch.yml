@@ -1,0 +1,42 @@
+name: Build npm branch
+
+# Rebuilds packages/core and force-pushes the ready-to-install package (dist
+# at the repo root) to the `npm` branch, which consumers depend on via
+# `github:MorsLeo/UIBubbles#npm`.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  npm-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build core
+        run: |
+          npm install --prefix packages/core --no-audit --no-fund
+          npm run build --prefix packages/core
+
+      - name: Push built package to npm branch
+        run: |
+          set -euo pipefail
+          STAGE="$(mktemp -d)"
+          cp -R packages/core/package.json packages/core/dist packages/core/src \
+            packages/core/LICENSE packages/core/README.md packages/core/CHANGELOG.md "$STAGE"/
+          cd "$STAGE"
+          git init -b npm
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "build: packages/core @ ${GITHUB_SHA}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" npm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
