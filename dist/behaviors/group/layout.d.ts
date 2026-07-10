@@ -1,0 +1,17 @@
+import type { BubbleSide, GlideTarget, GroupMember } from "../../types/index.js";
+/** Where the element already is — the no-op glide target. */
+export declare const restingPosition: (el: HTMLElement) => GlideTarget;
+/** Half the stack's total vertical spread around its center. */
+export declare const stackHalf: (count: number) => number;
+/** Keeps the whole stack inside the vertical edge gaps. */
+export declare const clampCenter: (center: number, el: HTMLElement, count: number) => number;
+/** Docked slot: pure function of the group center, side, and member index. */
+export declare const dockSlot: (member: GroupMember, stack: GroupMember[], centerY: number | undefined, side: BubbleSide) => GlideTarget;
+/** Row slot: the open bubbles sit centered in a row along the top gap. */
+export declare const rowSlot: (member: GroupMember, row: GroupMember[]) => GlideTarget;
+/** The dock a landed member teaches the group: its side, and the stack center its slot implies. */
+export declare const dockFromLanding: (member: GroupMember, stack: GroupMember[]) => {
+    side: BubbleSide;
+    centerY: number;
+};
+//# sourceMappingURL=layout.d.ts.map
