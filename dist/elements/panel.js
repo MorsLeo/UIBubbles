@@ -1,12 +1,9 @@
 import { prefersReducedMotion } from "../behaviors/reduced-motion.js";
 import { EDGE_MARGIN, Z_PANEL } from "../constants.js";
-import { BUBBLE_SIZE } from "../elements/bubble.js";
 import { toCssLength } from "../panel-length.js";
-import { viewportWidth } from "../viewport.js";
+import { viewportHeight, viewportWidth } from "../viewport.js";
 /** Gap between the bubble and the panel below it. */
 const PANEL_GAP = 18;
-/** Panel top edge when the bubble rests at the active (top center) spot. */
-const PANEL_TOP = EDGE_MARGIN + BUBBLE_SIZE + PANEL_GAP;
 const SHOW_MS = 150;
 /** Faster than the show: the exit rides the departing group and should read as a flick. */
 const HIDE_MS = 120;
@@ -80,12 +77,13 @@ export const createPanel = (attachPoint, bubble, content, options) => {
     // resizes. The clamp itself stays in %, not vw/vh — the panel is
     // fixed, so % resolves against the scrollbar-free viewport while vw/vh
     // would include page scrollbars.
+    // The viewport cap on the consumer's max-height depends on where the
+    // row rests (the panel may sit above or below it), so position()
+    // re-resolves it each frame; setAppearance only records the choice.
+    let maxHeightCap;
     const setAppearance = ({ theme, width, maxHeight }) => {
         el.style.width = `min(${toCssLength(width)}, calc(100% - ${EDGE_MARGIN * 2}px))`;
-        el.style.maxHeight =
-            maxHeight === undefined
-                ? `calc(100% - ${PANEL_TOP + EDGE_MARGIN}px)`
-                : `min(${toCssLength(maxHeight)}, calc(100% - ${PANEL_TOP + EDGE_MARGIN}px))`;
+        maxHeightCap = maxHeight;
         caret.style.background = theme.panelSurface;
         surface.style.background = theme.panelSurface;
         surface.style.color = theme.panelText;
@@ -100,12 +98,29 @@ export const createPanel = (attachPoint, bubble, content, options) => {
         const point = attachPoint();
         if (point === undefined)
             return;
+        // The row can rest anywhere, so the panel picks the side of it with
+        // room: below the flock while it fits (or below simply has more
+        // space), above it otherwise. The height cap follows the same side.
+        const spaceBelow = viewportHeight() - point.bottom - PANEL_GAP - EDGE_MARGIN;
+        const spaceAbove = point.top - PANEL_GAP - EDGE_MARGIN;
+        const below = spaceBelow >= el.offsetHeight || spaceBelow >= spaceAbove;
+        const available = Math.max(0, below ? spaceBelow : spaceAbove);
+        el.style.maxHeight =
+            maxHeightCap === undefined
+                ? `${available}px`
+                : `min(${toCssLength(maxHeightCap)}, ${available}px)`;
         const maxLeft = viewportWidth() - el.offsetWidth - EDGE_MARGIN;
         const centered = point.x - el.offsetWidth / 2;
         const left = Math.min(Math.max(centered, EDGE_MARGIN), maxLeft);
         el.style.left = `${left}px`;
-        el.style.top = `${point.bottom + PANEL_GAP}px`;
-        // The caret aims at this panel's own bubble, not the panel center.
+        el.style.top = below
+            ? `${point.bottom + PANEL_GAP}px`
+            : `${point.top - PANEL_GAP - el.offsetHeight}px`;
+        el.style.transformOrigin = below ? "top center" : "bottom center";
+        // The caret rides the edge facing the flock and aims at this panel's
+        // own bubble, not the panel center.
+        caret.style.top = below ? `${-CARET_SIZE / 2}px` : "";
+        caret.style.bottom = below ? "" : `${-CARET_SIZE / 2}px`;
         const bubbleRect = bubble.getBoundingClientRect();
         const aimed = bubbleRect.left + bubbleRect.width / 2 - left - CARET_SIZE / 2;
         const maxCaret = el.offsetWidth - CARET_INSET - CARET_SIZE;

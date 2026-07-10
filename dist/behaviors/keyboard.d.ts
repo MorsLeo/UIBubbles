@@ -9,13 +9,11 @@ export interface BubbleKeyHandlers {
     onArrow(direction: ArrowDirection, toEnd: boolean): void;
     /** Escape — collapses the open group. */
     onEscape(): void;
-    /** Delete/Backspace — dismisses the bubble (row mode). */
-    onDelete(): void;
 }
 /**
  * Routes a bubble's keyboard interactions to the group. preventDefault
- * on handled keys stops Space from scrolling the host page, arrows from
- * panning it, and Backspace from triggering legacy back-navigation.
+ * on handled keys stops Space from scrolling the host page and arrows
+ * from panning it.
  */
 export declare const makeKeyInteractive: (el: HTMLElement, handlers: BubbleKeyHandlers) => void;
 //# sourceMappingURL=keyboard.d.ts.map

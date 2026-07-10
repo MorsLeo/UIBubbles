@@ -1,3 +1,4 @@
+import { clampTop } from "../../behaviors/clamp.js";
 import { chooseSide, getSnappedSide, sideRestLeft } from "../../behaviors/snap.js";
 import { EDGE_MARGIN, ROW_GAP, STACK_OFFSET } from "../../constants.js";
 import { viewportHeight, viewportWidth } from "../../viewport.js";
@@ -24,16 +25,41 @@ export const dockSlot = (member, stack, centerY, side) => {
     const top = center - el.offsetHeight / 2 - stackHalf(stack.length) + index * STACK_OFFSET;
     return { left: sideRestLeft(el, side), top };
 };
-/** Row slot: the open bubbles sit centered in a row along the top gap. */
-export const rowSlot = (member, row) => {
+/** Total width of the open row for a given member size. */
+const rowWidth = (memberWidth, count) => count * memberWidth + (count - 1) * ROW_GAP;
+/** Keeps the whole row inside the horizontal edge gaps; an overflowing row centers. */
+const clampRowCenter = (centerX, total) => {
+    const min = EDGE_MARGIN + total / 2;
+    const max = viewportWidth() - EDGE_MARGIN - total / 2;
+    if (min > max)
+        return viewportWidth() / 2;
+    return Math.min(Math.max(centerX, min), max);
+};
+/**
+ * Row slot: the open bubbles sit in a row around the group's anchor —
+ * top-centered until a drag teaches the group another spot. The anchor
+ * is clamped at read time, so it survives resizes without going stale.
+ */
+export const rowSlot = (member, row, anchor) => {
     const index = row.findIndex((m) => m.id === member.id);
     if (index === -1)
         return restingPosition(member.el);
     const width = member.el.offsetWidth;
-    const total = row.length * width + (row.length - 1) * ROW_GAP;
+    const total = rowWidth(width, row.length);
+    const centerX = clampRowCenter(anchor?.centerX ?? viewportWidth() / 2, total);
     return {
-        left: (viewportWidth() - total) / 2 + index * (width + ROW_GAP),
-        top: EDGE_MARGIN
+        left: centerX - total / 2 + index * (width + ROW_GAP),
+        top: clampTop(member.el, anchor?.top ?? EDGE_MARGIN)
+    };
+};
+/** The row anchor a released member's landing implies: its slot lands exactly where it sits. */
+export const rowFromLanding = (member, row) => {
+    const rect = member.el.getBoundingClientRect();
+    const index = Math.max(row.findIndex((m) => m.id === member.id), 0);
+    const total = rowWidth(rect.width, row.length);
+    return {
+        centerX: rect.left - index * (rect.width + ROW_GAP) + total / 2,
+        top: rect.top
     };
 };
 /** The dock a landed member teaches the group: its side, and the stack center its slot implies. */

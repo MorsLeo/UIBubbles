@@ -1,1 +1,1 @@
-{"version":3,"file":"trail.d.ts","sourceRoot":"","sources":["../../../src/behaviors/group/trail.ts"],"names":[],"mappings":"AAKA,OAAO,KAAK,EAAa,WAAW,EAAE,SAAS,EAAe,WAAW,EAAE,MAAM,YAAY,CAAC;AAE9F;;;;;;;GAOG;AACH,eAAO,MAAM,eAAe,GAAI,MAAM,WAAW,EAAE,OAAO,MAAM,WAAW,EAAE,KAAG,SA8F/E,CAAC"}
+{"version":3,"file":"trail.d.ts","sourceRoot":"","sources":["../../../src/behaviors/group/trail.ts"],"names":[],"mappings":"AAKA,OAAO,KAAK,EAAa,SAAS,EAAe,WAAW,EAAE,MAAM,YAAY,CAAC;AAEjF;;;;;GAKG;AACH,eAAO,MAAM,eAAe,GAAI,OAAO,MAAM,WAAW,EAAE,KAAG,SAiF5D,CAAC"}

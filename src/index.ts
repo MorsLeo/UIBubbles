@@ -1,4 +1,3 @@
-import { createDismissZone } from "$src/behaviors/dismiss";
 import { makeDraggable } from "$src/behaviors/drag";
 import { createBubbleGroup } from "$src/behaviors/group";
 import { makeKeyInteractive } from "$src/behaviors/keyboard";
@@ -16,8 +15,7 @@ import type {
 	BubbleManager,
 	BubbleRemoveReason,
 	BubblesOptions,
-	BubblesState,
-	DismissZone
+	BubblesState
 } from "$src/types";
 
 export { bubbleThemes } from "$src/theme";
@@ -60,7 +58,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	const listeners = new Map<keyof BubbleEvents, Set<(detail: never) => void>>();
 	const occurrences: Array<
 		| { event: "add"; detail: BubbleEvents["add"] }
-		| { event: "dismiss"; detail: BubbleEvents["dismiss"] }
 		| { event: "remove"; detail: BubbleEvents["remove"] }
 	> = [];
 	let lastState: BubblesState = config.initialState;
@@ -85,9 +82,9 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		if (state !== lastState) {
 			lastState = state;
 			deliver("statechange", { state });
-			// Add/dismiss are announced at their call sites (while the bubble
-			// still exists to read a label from); expand/collapse is a pure
-			// state diff, announced here with the live item count.
+			// Add is announced at its call site (while the bubble still exists
+			// to read a label from); expand/collapse is a pure state diff,
+			// announced here with the live item count.
 			const count = bubbles.size - retiring.size;
 			if (state === "open")
 				live.announce(`Bubbles expanded, ${count} ${count === 1 ? "item" : "items"}`);
@@ -123,41 +120,20 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	// and content are the consumer's to restyle. Nothing evaluates while
 	// no bubbles exist, so it's safe without a DOM.
 	const repaint = () => {
-		zone?.setTheme(themeTokens());
 		for (const bubble of bubbles.values()) {
 			setBubbleTheme(bubble.el, themeTokens());
 			bubble.panel?.setAppearance(panelAppearance(bubble));
 		}
 	};
 
-	// One dismiss target and one group coordinate every bubble; created
-	// lazily so constructing a manager touches no DOM.
-	let zone: DismissZone | undefined;
+	// One group coordinates every bubble; created lazily so constructing
+	// a manager touches no DOM.
 	let group: BubbleGroup | undefined;
 
-	// --- Accessibility: live announcements and focus return ---
+	// --- Accessibility: live announcements ---
 
 	const live = createLiveRegion();
 	const labelFor = (id: string) => bubbles.get(id)?.el.getAttribute("aria-label") ?? "Bubble";
-
-	// The last element focused outside the flock, so when the flock empties
-	// (the final row bubble deleted) focus returns there instead of stranding
-	// on <body>; a registered trigger is the fallback.
-	let returnFocusEl: HTMLElement | null = null;
-	const isInFlock = (node: Node | null): boolean =>
-		node !== null &&
-		[...bubbles.values()].some((b) => b.el.contains(node) || b.panel?.contains(node) === true);
-	const onFocusIn = (event: FocusEvent) => {
-		if (!isInFlock(event.target as Node | null)) returnFocusEl = event.target as HTMLElement | null;
-	};
-	const restoreFocus = () => {
-		for (const candidate of [returnFocusEl, ...triggers]) {
-			if (candidate?.isConnected) {
-				candidate.focus();
-				if (document.activeElement === candidate) return;
-			}
-		}
-	};
 
 	// Repaints an auto-themed overlay when the OS preference flips;
 	// registered only while the overlay exists.
@@ -169,13 +145,10 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	// An emptied-out overlay tears down completely, so the next bubble
 	// enters like the first one did — fresh dock from the current config.
 	const teardownGroup = () => {
-		if (!zone) return;
+		if (!group) return;
 		group = undefined;
-		zone.destroy();
-		zone = undefined;
 		window.removeEventListener("resize", onResize);
 		document.removeEventListener("pointerdown", onDocumentPointerDown, true);
-		document.removeEventListener("focusin", onFocusIn);
 		scheme?.removeEventListener("change", onSchemeChange);
 		scheme = undefined;
 	};
@@ -196,12 +169,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		if (bubbles.size === 0) teardownGroup();
 		occurrences.push({ event: "remove", detail: { id, reason } });
 		scheduleFlush();
-	};
-
-	const dismissById = (id: string) => {
-		const bubble = bubbles.get(id);
-		removeById(id, "user");
-		bubble?.onDismiss?.();
 	};
 
 	const onResize = () => group?.handleResize();
@@ -226,29 +193,8 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 	const ensureGroup = (): BubbleGroup => {
 		if (group) return group;
 
-		zone = createDismissZone(themeTokens());
-
 		group = createBubbleGroup(
-			zone,
-			{
-				remove: dismissById,
-				removeAll: () => {
-					for (const id of [...bubbles.keys()]) dismissById(id);
-				},
-				// Commit-time announcement: the bubble is still mounted (its
-				// exit hasn't started), and a remove with reason "user" follows
-				// once it's gone.
-				dismissed: (id) => {
-					if (!bubbles.has(id)) return;
-					// Announced here, at commit, while the bubble is still mounted —
-					// by flush time the user-removal has already deleted it.
-					live.announce(`${labelFor(id)} dismissed`);
-					occurrences.push({ event: "dismiss", detail: { id } });
-					scheduleFlush();
-				},
-				onChange: scheduleFlush,
-				restoreFocus
-			},
+			{ onChange: scheduleFlush },
 			{
 				side: config.side,
 				vertical: config.vertical,
@@ -258,14 +204,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 		);
 		window.addEventListener("resize", onResize);
 		document.addEventListener("pointerdown", onDocumentPointerDown, true);
-		document.addEventListener("focusin", onFocusIn);
-
-		// Seed the return target with focus that predates the listener: a flock
-		// opened over an already-focused control (the listener attaches here, on
-		// the first add) still hands focus back when it empties.
-		const preexisting = document.activeElement;
-		if (preexisting instanceof HTMLElement && preexisting !== document.body && !isInFlock(preexisting))
-			returnFocusEl = preexisting;
 
 		scheme = window.matchMedia("(prefers-color-scheme: dark)");
 		scheme.addEventListener("change", onSchemeChange);
@@ -280,14 +218,12 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 			assertPanelLength(options.panelMaxHeight, "panelMaxHeight");
 
 			// Re-adding a mounted bubble refreshes everything refreshable in
-			// place — the dismiss callback, the label, the panel sizing
-			// overrides — and reverses an exit still in flight, so rapid
-			// toggles always honor the latest direction. The element, icon,
-			// and content live on.
+			// place — the label, the panel sizing overrides — and reverses an
+			// exit still in flight, so rapid toggles always honor the latest
+			// direction. The element, icon, and content live on.
 			const existing = bubbles.get(options.id);
 			if (existing) {
 				if (group?.restoreMember(options.id)) retiring.delete(options.id);
-				existing.onDismiss = options.onDismiss;
 				existing.panelWidth = options.panelWidth;
 				existing.panelMaxHeight = options.panelMaxHeight;
 				existing.panel?.setAppearance(panelAppearance(existing));
@@ -328,18 +264,14 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 					onTap: () => bubbleGroup.onTap(options.id),
 					onDragStart: (x, y, coarse) => bubbleGroup.onDragStart(options.id, x, y, coarse),
 					onDragMove: (x, y) => bubbleGroup.onDragMove(x, y),
-					onDragEnd: (velocity) => bubbleGroup.onDragEnd(options.id, velocity),
-					onDismissCommit: () => bubbleGroup.onDismissCommit(options.id),
-					onDismiss: () => bubbleGroup.onDismiss(options.id)
+					onDragEnd: (velocity) => bubbleGroup.onDragEnd(options.id, velocity)
 				},
-				zone,
 				() => config.ricochet
 			);
 			makeKeyInteractive(el, {
 				onActivate: () => bubbleGroup.onTap(options.id),
 				onArrow: (direction, toEnd) => bubbleGroup.onArrow(options.id, direction, toEnd),
-				onEscape: () => bubbleGroup.onEscape(),
-				onDelete: () => bubbleGroup.onDelete(options.id)
+				onEscape: () => bubbleGroup.onEscape()
 			});
 
 			bubbleGroup.addMember({ id: options.id, el, panel });
@@ -349,7 +281,6 @@ export const createBubbles = (options?: BubblesOptions): BubbleManager => {
 				panel,
 				panelWidth: options.panelWidth,
 				panelMaxHeight: options.panelMaxHeight,
-				onDismiss: options.onDismiss,
 				teardowns
 			});
 			live.announce(`${labelFor(options.id)} added`);

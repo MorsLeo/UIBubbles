@@ -1,10 +1,9 @@
-import { createCaptureFollower } from "../behaviors/capture.js";
 import { startFling } from "../behaviors/fling.js";
 import { clearSnappedSide } from "../behaviors/snap.js";
 import { createVelocityTracker } from "../behaviors/velocity.js";
 import { TAP_DRAG_THRESHOLD } from "../constants.js";
 import { RESTITUTION, TOUCH_VELOCITY_BOOST } from "../physics/config.js";
-export const makeDraggable = (el, hooks = {}, dismissZone, 
+export const makeDraggable = (el, hooks = {}, 
 // Read at fling time, so a reconfigured value applies to the next throw.
 ricochet = () => RESTITUTION) => {
     const tracker = createVelocityTracker();
@@ -29,15 +28,8 @@ ricochet = () => RESTITUTION) => {
         const startY = event.clientY;
         let offsetX = 0;
         let offsetY = 0;
-        let lastX = event.clientX;
-        let lastY = event.clientY;
         let dragging = false;
         let takenOver = false;
-        const follower = dismissZone &&
-            createCaptureFollower(el, dismissZone, () => ({
-                left: lastX - offsetX,
-                top: lastY - offsetY
-            }));
         el.setPointerCapture(event.pointerId);
         // Nothing visual changes until the pointer leaves the tap dead zone,
         // so a slightly shaky tap doesn't nudge the bubble or unsnap it.
@@ -52,27 +44,20 @@ ricochet = () => RESTITUTION) => {
             offsetX = e.clientX - rect.left;
             offsetY = e.clientY - rect.top;
             el.style.cursor = "grabbing";
-            dismissZone?.show();
         };
         const onMove = (e) => {
             tracker.addSample(e.clientX, e.clientY, e.timeStamp);
-            lastX = e.clientX;
-            lastY = e.clientY;
             if (!dragging) {
                 if (Math.hypot(e.clientX - startX, e.clientY - startY) < TAP_DRAG_THRESHOLD)
                     return;
                 beginDrag(e);
             }
             // A taken-over drag owns every position; the drag just feeds it
-            // the pointer and keeps the dismiss target's capture tracking.
+            // the pointer.
             if (takenOver) {
-                dismissZone?.track(e.clientX, e.clientY);
                 hooks.onDragMove?.(e.clientX, e.clientY);
                 return;
             }
-            // Capture (and the escape back from it) wins over the pointer.
-            if (follower?.update(e.clientX, e.clientY))
-                return;
             el.style.left = `${e.clientX - offsetX}px`;
             el.style.top = `${e.clientY - offsetY}px`;
         };
@@ -82,28 +67,13 @@ ricochet = () => RESTITUTION) => {
             el.removeEventListener("pointerup", onEnd);
             el.removeEventListener("pointercancel", onEnd);
             if (dragging) {
-                if (dismissZone?.captured()) {
-                    // Commit fires now, before the ride off-screen — consumers
-                    // hear the dismissal the instant the user lets go.
-                    hooks.onDismissCommit?.();
-                    // The capture hold keeps running, so the bubble rides the
-                    // target off-screen; removal waits until the pair is gone.
-                    dismissZone.hide(() => {
-                        follower?.cancel();
-                        hooks.onDismiss?.();
-                    });
-                }
-                else {
-                    follower?.cancel();
-                    dismissZone?.hide();
-                    // Direct-contact pointers have no OS acceleration, so their
-                    // raw px/s runs far below a mouse's; the boost levels the throw.
-                    const boost = e.pointerType === "mouse" ? 1 : TOUCH_VELOCITY_BOOST;
-                    const raw = tracker.getVelocity(e.timeStamp);
-                    const velocity = { x: raw.x * boost, y: raw.y * boost };
-                    if (!hooks.onDragEnd?.(velocity)) {
-                        cancelFling = startFling(el, velocity, ricochet());
-                    }
+                // Direct-contact pointers have no OS acceleration, so their
+                // raw px/s runs far below a mouse's; the boost levels the throw.
+                const boost = e.pointerType === "mouse" ? 1 : TOUCH_VELOCITY_BOOST;
+                const raw = tracker.getVelocity(e.timeStamp);
+                const velocity = { x: raw.x * boost, y: raw.y * boost };
+                if (!hooks.onDragEnd?.(velocity)) {
+                    cancelFling = startFling(el, velocity, ricochet());
                 }
             }
             else if (e.type === "pointerup") {

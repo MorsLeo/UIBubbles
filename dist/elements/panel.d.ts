@@ -13,6 +13,7 @@ import type { PanelAppearance, PanelController } from "../types/index.js";
  */
 export declare const createPanel: (attachPoint: () => {
     x: number;
+    top: number;
     bottom: number;
 } | undefined, bubble: HTMLElement, content: HTMLElement, options: {
     id: string;

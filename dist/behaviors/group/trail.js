@@ -7,11 +7,9 @@ import { springStep } from "../../physics/spring.js";
  * The chase simulations behind a docked group drag. The leader's center
  * rides the pointer — grabbing the group anywhere reads as holding its
  * topmost bubble — and every other member springs after its neighbor
- * toward the leader, the chained springs making the tail. While the
- * dismiss target holds the group (and through a captured release's
- * exit) everyone converges on the target instead.
+ * toward the leader, the chained springs making the tail.
  */
-export const createDragTrail = (zone, stack) => {
+export const createDragTrail = (stack) => {
     const chases = new Map();
     // Live pointer position — the leader's chase target.
     let grabX = 0;
@@ -19,16 +17,7 @@ export const createDragTrail = (zone, stack) => {
     // Time-scale on the chase springs: touch drags run them faster so the
     // group tracks a finger as tightly as an accelerated mouse pointer.
     let rate = 1;
-    const zoneTarget = (member) => {
-        const c = zone.center();
-        return {
-            left: c.x - member.el.offsetWidth / 2,
-            top: c.y - member.el.offsetHeight / 2
-        };
-    };
     const chainTarget = (member, leaderId) => () => {
-        if (zone.captured())
-            return zoneTarget(member);
         const chain = stack();
         const i = chain.findIndex((m) => m.id === member.id);
         const toward = i < chain.findIndex((m) => m.id === leaderId) ? 1 : -1;
@@ -38,14 +27,10 @@ export const createDragTrail = (zone, stack) => {
         const rect = neighbor.el.getBoundingClientRect();
         return { left: rect.left, top: rect.top - toward * STACK_OFFSET };
     };
-    const grabTarget = (member) => () => {
-        if (zone.captured() || zone.dismissing())
-            return zoneTarget(member);
-        return {
-            left: grabX - member.el.offsetWidth / 2,
-            top: grabY - member.el.offsetHeight / 2
-        };
-    };
+    const grabTarget = (member) => () => ({
+        left: grabX - member.el.offsetWidth / 2,
+        top: grabY - member.el.offsetHeight / 2
+    });
     const setPointer = (x, y) => {
         grabX = x;
         grabY = y;
@@ -85,7 +70,7 @@ export const createDragTrail = (zone, stack) => {
             y = springStep(y, t.top, dt * rate);
             member.el.style.left = `${x.position}px`;
             member.el.style.top = `${y.position}px`;
-            return false; // Lives until the group settles or is dismissed.
+            return false; // Lives until the group settles.
         }));
     };
     return { setPointer, setRate, chase, cancel, cancelAll };

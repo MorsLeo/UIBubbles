@@ -3,17 +3,15 @@ import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { runSimulation } from "$src/behaviors/simulate";
 import { STACK_OFFSET } from "$src/constants";
 import { springStep } from "$src/physics/spring";
-import type { AxisState, DismissZone, DragTrail, GlideTarget, GroupMember } from "$src/types";
+import type { AxisState, DragTrail, GlideTarget, GroupMember } from "$src/types";
 
 /**
  * The chase simulations behind a docked group drag. The leader's center
  * rides the pointer — grabbing the group anywhere reads as holding its
  * topmost bubble — and every other member springs after its neighbor
- * toward the leader, the chained springs making the tail. While the
- * dismiss target holds the group (and through a captured release's
- * exit) everyone converges on the target instead.
+ * toward the leader, the chained springs making the tail.
  */
-export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): DragTrail => {
+export const createDragTrail = (stack: () => GroupMember[]): DragTrail => {
 	const chases = new Map<string, () => void>();
 
 	// Live pointer position — the leader's chase target.
@@ -24,17 +22,7 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 	// group tracks a finger as tightly as an accelerated mouse pointer.
 	let rate = 1;
 
-	const zoneTarget = (member: GroupMember): GlideTarget => {
-		const c = zone.center();
-		return {
-			left: c.x - member.el.offsetWidth / 2,
-			top: c.y - member.el.offsetHeight / 2
-		};
-	};
-
 	const chainTarget = (member: GroupMember, leaderId: string) => (): GlideTarget => {
-		if (zone.captured()) return zoneTarget(member);
-
 		const chain = stack();
 		const i = chain.findIndex((m) => m.id === member.id);
 		const toward = i < chain.findIndex((m) => m.id === leaderId) ? 1 : -1;
@@ -45,13 +33,10 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 		return { left: rect.left, top: rect.top - toward * STACK_OFFSET };
 	};
 
-	const grabTarget = (member: GroupMember) => (): GlideTarget => {
-		if (zone.captured() || zone.dismissing()) return zoneTarget(member);
-		return {
-			left: grabX - member.el.offsetWidth / 2,
-			top: grabY - member.el.offsetHeight / 2
-		};
-	};
+	const grabTarget = (member: GroupMember) => (): GlideTarget => ({
+		left: grabX - member.el.offsetWidth / 2,
+		top: grabY - member.el.offsetHeight / 2
+	});
 
 	const setPointer = (x: number, y: number) => {
 		grabX = x;
@@ -101,7 +86,7 @@ export const createDragTrail = (zone: DismissZone, stack: () => GroupMember[]): 
 				y = springStep(y, t.top, dt * rate);
 				member.el.style.left = `${x.position}px`;
 				member.el.style.top = `${y.position}px`;
-				return false; // Lives until the group settles or is dismissed.
+				return false; // Lives until the group settles.
 			})
 		);
 	};

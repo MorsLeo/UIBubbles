@@ -1,7 +1,7 @@
 /**
  * Routes a bubble's keyboard interactions to the group. preventDefault
- * on handled keys stops Space from scrolling the host page, arrows from
- * panning it, and Backspace from triggering legacy back-navigation.
+ * on handled keys stops Space from scrolling the host page and arrows
+ * from panning it.
  */
 export const makeKeyInteractive = (el, handlers) => {
     el.addEventListener("keydown", (event) => {
@@ -24,10 +24,6 @@ export const makeKeyInteractive = (el, handlers) => {
                 break;
             case "Escape":
                 handlers.onEscape();
-                break;
-            case "Delete":
-            case "Backspace":
-                handlers.onDelete();
                 break;
             default:
                 return;

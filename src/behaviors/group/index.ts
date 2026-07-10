@@ -2,7 +2,13 @@ import { clampTop } from "$src/behaviors/clamp";
 import { startFling } from "$src/behaviors/fling";
 import { startGlide } from "$src/behaviors/glide";
 import { createGroupFeedback } from "$src/behaviors/group/feedback";
-import { clampCenter, dockFromLanding, dockSlot, rowSlot } from "$src/behaviors/group/layout";
+import {
+	clampCenter,
+	dockFromLanding,
+	dockSlot,
+	rowFromLanding,
+	rowSlot
+} from "$src/behaviors/group/layout";
 import { createDragTrail } from "$src/behaviors/group/trail";
 import { prefersReducedMotion } from "$src/behaviors/reduced-motion";
 import { chooseSide } from "$src/behaviors/snap";
@@ -13,10 +19,10 @@ import type {
 	BubbleGroup,
 	BubbleSide,
 	BubblesState,
-	DismissZone,
 	GlideTarget,
 	GroupCallbacks,
-	GroupMember
+	GroupMember,
+	RowAnchor
 } from "$src/types";
 import { viewportHeight, viewportWidth } from "$src/viewport";
 
@@ -31,14 +37,14 @@ const DOCK_NUDGE = 80;
 
 /**
  * Coordinates every bubble. Docked, they're a stack distributed around
- * a group-owned center: they drag together as a chained trail, fling
- * together, and dismiss together. Tapped open, they form a centered row
- * at the top with one member's panel showing — tap to switch panels,
- * tap the active bubble to collapse home. Row bubbles drag (and
- * dismiss) individually, returning to their slot on release.
+ * a group-owned center: they drag together as a chained trail and fling
+ * together. Tapped open, they form a row — top-centered at first — with
+ * one member's panel showing: tap to switch panels, tap the active
+ * bubble to collapse home. Dragging a row bubble moves the row: its
+ * landing becomes the row's new anchor, and the rest of the flock (and
+ * the panel) reflows around it.
  */
 export const createBubbleGroup = (
-	zone: DismissZone,
 	callbacks: GroupCallbacks,
 	config: {
 		side: BubbleSide;
@@ -54,6 +60,8 @@ export const createBubbleGroup = (
 	let mode: BubblesState = config.initialState;
 	let side: BubbleSide = config.side;
 	let centerY: number | undefined;
+	// Where the open row rests; undefined is the default top-centered spot.
+	let rowAnchor: RowAnchor | undefined;
 	let activeId: string | undefined;
 	let groupDragging = false;
 	let dragLeaderId: string | undefined;
@@ -92,7 +100,7 @@ export const createBubbleGroup = (
 	const flightLeaderId = () => dragLeaderId ?? flingLeaderId;
 	const groupInFlight = () => groupDragging || flingLeaderId !== undefined;
 
-	const trail = createDragTrail(zone, docked);
+	const trail = createDragTrail(docked);
 	const feedback = createGroupFeedback(members, () => mode === "docked");
 
 	const cancelMotion = (id: string) => {
@@ -101,7 +109,9 @@ export const createBubbleGroup = (
 	};
 
 	const slotTargetFor = (member: GroupMember): GlideTarget =>
-		mode === "open" ? rowSlot(member, docked()) : dockSlot(member, docked(), centerY, side);
+		mode === "open"
+			? rowSlot(member, docked(), rowAnchor)
+			: dockSlot(member, docked(), centerY, side);
 
 	/** The grabbed bubble's landing teaches the group its new dock. */
 	const adoptDockFrom = (member: GroupMember) => {
@@ -146,7 +156,7 @@ export const createBubbleGroup = (
 	const revealWhenNear = (member: GroupMember) => () => {
 		if (mode !== "open" || member.id !== activeId) return;
 
-		const slot = rowSlot(member, docked());
+		const slot = rowSlot(member, docked(), rowAnchor);
 		const rect = member.el.getBoundingClientRect();
 		if (Math.hypot(rect.left - slot.left, rect.top - slot.top) < PANEL_APPEAR_DISTANCE) {
 			member.panel?.show();
@@ -161,9 +171,9 @@ export const createBubbleGroup = (
 	};
 
 	// Glides every settling member to its slot. Unlike settleMembers it
-	// leaves the trail and flingLeaderId untouched, so a member still
-	// riding the dismiss target off-screen (its exit driven by the trail)
-	// keeps flying while the rest of the flock reflows around its gap.
+	// leaves the trail and flingLeaderId untouched, so a member whose
+	// exit is still driven by another motion keeps flying while the rest
+	// of the flock reflows around its gap.
 	const glideMembersToSlots = () => {
 		syncZOrder();
 		for (const m of members) {
@@ -259,22 +269,25 @@ export const createBubbleGroup = (
 		side === "left" ? -(el.offsetWidth + EDGE_MARGIN) : viewportWidth() + EDGE_MARGIN;
 
 	return {
-		// Panels position off the group, not any one bubble: below the
-		// flock's centroid. At rest the open row is page-centered, so the
-		// centroid IS the page center — one rule for the panel's whole
-		// life, no positional handoffs to snap.
+		// Panels position off the group, not any one bubble: against the
+		// flock's centroid. The row can rest anywhere on screen, so the
+		// panel gets both edges of the centroid and picks the side with
+		// room — one rule for the panel's whole life, no positional
+		// handoffs to snap.
 		attachPoint() {
 			const flock = docked();
 			if (flock.length === 0) return undefined;
 
 			let x = 0;
+			let top = 0;
 			let bottom = 0;
 			for (const m of flock) {
 				const rect = m.el.getBoundingClientRect();
 				x += rect.left + rect.width / 2;
+				top += rect.top;
 				bottom += rect.bottom;
 			}
-			return { x: x / flock.length, bottom: bottom / flock.length };
+			return { x: x / flock.length, top: top / flock.length, bottom: bottom / flock.length };
 		},
 
 		addMember(member) {
@@ -293,7 +306,7 @@ export const createBubbleGroup = (
 			if (mode === "open") {
 				// Falls in from off-screen top into the far-left slot and takes
 				// the active panel (revealed by its arrival); the row shifts over.
-				el.style.left = `${rowSlot(member, docked()).left}px`;
+				el.style.left = `${rowSlot(member, docked(), rowAnchor).left}px`;
 				el.style.top = `${-(el.offsetHeight + EDGE_MARGIN)}px`;
 				hideAllPanels();
 				settleMembers();
@@ -305,7 +318,7 @@ export const createBubbleGroup = (
 				// while only the newest falls at full speed.
 				for (const m of docked()) {
 					if (m.el.getBoundingClientRect().bottom > 0) continue;
-					m.el.style.left = `${rowSlot(m, docked()).left}px`;
+					m.el.style.left = `${rowSlot(m, docked(), rowAnchor).left}px`;
 					seedMotion(m, { x: 0, y: LAUNCH_SPEED });
 				}
 				return;
@@ -353,10 +366,11 @@ export const createBubbleGroup = (
 				setMode("docked");
 				setActive(undefined);
 				flingLeaderId = undefined;
-				// The dock height dies with the group, so a reborn group
-				// re-centers as one — only the side is remembered. While any
-				// member remains (even mid-exit), re-adds keep the old dock.
+				// The dock height and row anchor die with the group, so a
+				// reborn group re-centers as one — only the side is remembered.
+				// While any member remains (even mid-exit), re-adds keep both.
 				centerY = undefined;
+				rowAnchor = undefined;
 				return;
 			}
 
@@ -479,7 +493,7 @@ export const createBubbleGroup = (
 				rect.top >= viewportHeight();
 			if (gone) {
 				if (mode === "open") {
-					member.el.style.left = `${rowSlot(member, docked()).left}px`;
+					member.el.style.left = `${rowSlot(member, docked(), rowAnchor).left}px`;
 					member.el.style.top = `${-(member.el.offsetHeight + EDGE_MARGIN)}px`;
 				} else {
 					member.el.style.left = `${offscreenLeft(member.el)}px`;
@@ -576,23 +590,6 @@ export const createBubbleGroup = (
 			docked()[0]?.el.focus();
 		},
 
-		onDelete(id) {
-			if (mode !== "open" || retiring.has(id)) return;
-
-			// The neighbor is chosen before removal reshuffles the row:
-			// prefer the bubble to the right, falling back left at the end.
-			const row = docked();
-			const i = row.findIndex((m) => m.id === id);
-			if (i === -1) return;
-			const neighbor = row[i + 1] ?? row[i - 1];
-			callbacks.dismissed(id);
-			callbacks.remove(id);
-			// The dismissed bubble was the last one — hand focus back out of the
-			// flock rather than stranding it on <body>.
-			if (neighbor) neighbor.el.focus();
-			else callbacks.restoreFocus();
-		},
-
 		toggle() {
 			const flock = docked();
 			if (flock.length === 0) return;
@@ -638,9 +635,9 @@ export const createBubbleGroup = (
 
 			cancelMotion(id);
 
-			// Row bubbles drag individually (the per-bubble removal path),
-			// but on the same chase spring as a docked drag — one drag feel
-			// everywhere, and the trail's capture handling comes with it.
+			// Row bubbles drag individually (the row-repositioning path), but
+			// on the same chase spring as a docked drag — one drag feel
+			// everywhere.
 			if (mode === "open") {
 				rowDraggingId = id;
 				member.el.style.zIndex = `${Z_BUBBLE_TOP}`;
@@ -679,21 +676,15 @@ export const createBubbleGroup = (
 			const member = byId(id);
 			if (!member) return false;
 
-			// A released row bubble returns to its slot; the active panel
-			// comes back once it arrives.
+			// A released row bubble docks where it lands: its landing becomes
+			// the row's new anchor, the rest of the flock reflows around it,
+			// and the active panel comes back once its bubble settles
+			// (revealWhenNear, via the settle glides).
 			if (rowDraggingId === id) {
 				rowDraggingId = undefined;
 				trail.cancel(id);
-				motions.set(
-					id,
-					startGlide(member.el, () => rowSlot(member, docked()), {
-						onRest: () => {
-							motions.delete(id);
-							const active = activeId ? byId(activeId) : undefined;
-							if (mode === "open") active?.panel?.show();
-						}
-					})
-				);
+				rowAnchor = rowFromLanding(member, docked());
+				settleMembers();
 				return true;
 			}
 
@@ -717,43 +708,6 @@ export const createBubbleGroup = (
 				})
 			);
 			return true;
-		},
-
-		onDismissCommit(id) {
-			// Announce the same set the post-exit removal will take: a docked
-			// drag dismisses the whole flock, a row bubble just itself.
-			if (groupDragging) {
-				// The whole flock is leaving — nothing remains to reflow.
-				for (const m of docked()) callbacks.dismissed(m.id);
-				return;
-			}
-			callbacks.dismissed(id);
-
-			// The bubble is committed but still riding the target off-screen
-			// (the trail drives that exit). Begin its retirement now so the
-			// rest of the row closes the gap and the next panel takes over
-			// immediately, rather than waiting out the off-screen animation;
-			// removeMember still does the final cleanup when the ride ends.
-			// glideMembersToSlots, not settleMembers, keeps the departing
-			// bubble's trail alive so it finishes its flight.
-			const member = byId(id);
-			if (!member || retiring.has(id)) return;
-			retiring.add(id);
-			handOffActivePanel(id);
-			syncMembers();
-			if (!groupInFlight()) glideMembersToSlots();
-		},
-
-		onDismiss(id) {
-			rowDraggingId = undefined;
-			if (groupDragging) {
-				groupDragging = false;
-				dragLeaderId = undefined;
-				trail.cancelAll();
-				callbacks.removeAll();
-				return;
-			}
-			callbacks.remove(id);
 		},
 
 		handleResize() {
