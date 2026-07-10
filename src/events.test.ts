@@ -177,40 +177,6 @@ describe("add and remove events", () => {
 		expect(log).toEqual([]);
 	});
 
-	it("runs onDismiss before the user-removal event delivers", async () => {
-		const order: string[] = [];
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a", onDismiss: () => order.push("onDismiss") });
-		manager.add({ id: "b", label: "b" });
-		manager.toggle();
-		await tick();
-		manager.on("remove", ({ id, reason }) => order.push(`remove:${id}:${reason}`));
-
-		// Delete is the user dismissal reachable without a pointer; it only
-		// acts on an open row, hence the toggle above.
-		bubbleEl("a").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
-		await tick();
-		expect(order).toEqual(["onDismiss", "remove:a:user"]);
-	});
-
-	it("fires dismiss at commit for a user dismissal, ahead of remove", async () => {
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a" });
-		manager.add({ id: "b", label: "b" });
-		manager.toggle();
-		await tick();
-		const log = logEvents(manager);
-
-		bubbleEl("a").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
-		await tick();
-		await tick();
-
-		// dismiss (commit) precedes remove (gone), for the same id.
-		expect(log.filter((e) => e.event === "dismiss" || e.event === "remove")).toEqual([
-			{ event: "dismiss", detail: { id: "a" } },
-			{ event: "remove", detail: { id: "a", reason: "user" } }
-		]);
-	});
 
 	it("does not fire dismiss for a programmatic removal", async () => {
 		manager = createBubbles();

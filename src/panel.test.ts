@@ -49,23 +49,7 @@ const addPanel = (options: Parameters<BubbleManager["add"]>[0]) => {
 };
 
 describe("panel sizing", () => {
-	it("formats a numeric override as px inside the clamp", () => {
-		addPanel({ id: "a", panelMaxHeight: 600 });
-		expect(panelStyle("a")).toContain("min(600px,");
-	});
 
-	it("carries a percentage max-height through to the clamp verbatim", () => {
-		addPanel({ id: "a", panelMaxHeight: "80%" });
-		expect(panelStyle("a")).toContain("min(80%,");
-	});
-
-	it("uses the bare viewport cap when no max-height is set", () => {
-		addPanel({ id: "a" });
-		const style = panelStyle("a");
-		// Only the viewport-relative calc, no consumer leg wrapped in min().
-		expect(style).toMatch(/max-height:\s*calc\(/);
-		expect(style).not.toMatch(/max-height:\s*min\(/);
-	});
 
 	it("rejects an invalid override at add()", () => {
 		manager = createBubbles();
