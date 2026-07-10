@@ -8,23 +8,7 @@ export const bubble = (page: Page, label: string) =>
 export const focusedLabel = (page: Page): Promise<string | null> =>
 	page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? null);
 
-/**
- * Drags a bubble onto the dismiss target with a real pointer. Moves to the
- * bottom-center where the target rests (well inside its capture radius on a
- * desktop viewport), in steps so the velocity tracker and the target's
- * capture both see the motion, then releases.
- */
-export const dragToDismiss = async (page: Page, label: string): Promise<void> => {
-	const box = await bubble(page, label).boundingBox();
-	const vp = page.viewportSize();
-	if (!box || !vp) throw new Error(`cannot drag "${label}": no box/viewport`);
 
-	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(vp.width / 2, vp.height - 60, { steps: 24 });
-	await page.mouse.move(vp.width / 2, vp.height - 56, { steps: 4 });
-	await page.mouse.up();
-};
 
 /**
  * Resolves once every bubble has held its position for a few consecutive

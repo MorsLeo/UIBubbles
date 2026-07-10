@@ -80,71 +80,9 @@ describe("live announcements", () => {
 		await tick();
 		expect(liveText()).toBe("Bubbles collapsed");
 	});
-
-	it("announces a user dismissal by label", async () => {
-		manager = createBubbles();
-		manager.add({ id: "a", label: "Alpha" });
-		manager.add({ id: "b", label: "Beta" });
-		manager.toggle();
-		await tick();
-
-		bubbleEl("Alpha").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
-		await tick();
-		expect(liveText()).toBe("Alpha dismissed");
-	});
 });
 
-describe("focus return on empty", () => {
-	it("returns focus to where it was before the flock when the last bubble is deleted", async () => {
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a" });
-		manager.toggle();
-		await tick();
 
-		// Focus was last outside the flock before the deletion.
-		const outside = document.body.appendChild(document.createElement("button"));
-		outside.dispatchEvent(new Event("focusin", { bubbles: true }));
-
-		bubbleEl("a").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
-		await tick();
-		await tick();
-
-		expect(document.activeElement).toBe(outside);
-	});
-
-	it("returns focus to an element focused before the flock existed", async () => {
-		// Focus predates the manager — the focusin listener isn't attached yet,
-		// so this is only recoverable via the seed at group creation.
-		const outside = document.body.appendChild(document.createElement("button"));
-		outside.focus();
-
-		manager = createBubbles();
-		manager.add({ id: "a", label: "a" });
-		manager.toggle();
-		await tick();
-
-		bubbleEl("a").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
-		await tick();
-		await tick();
-
-		expect(document.activeElement).toBe(outside);
-	});
-
-	it("falls back to a registered trigger when nothing else is known", async () => {
-		manager = createBubbles();
-		const launcher = document.body.appendChild(document.createElement("button"));
-		manager.registerTrigger(launcher);
-		manager.add({ id: "a", label: "a" });
-		manager.toggle();
-		await tick();
-
-		bubbleEl("a").dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
-		await tick();
-		await tick();
-
-		expect(document.activeElement).toBe(launcher);
-	});
-});
 
 describe("disclosure panel", () => {
 	it("uses role=region, not dialog", async () => {

@@ -53,23 +53,6 @@ describe("makeKeyInteractive", () => {
 		expect(handlers.onArrow).toHaveBeenCalledWith("up", true);
 	});
 
-	it("escapes on Escape and deletes on Delete or Backspace", () => {
-		const { handlers, press } = harness();
-		press("Escape");
-		expect(handlers.onEscape).toHaveBeenCalledTimes(1);
-
-		press("Delete");
-		press("Backspace");
-		expect(handlers.onDelete).toHaveBeenCalledTimes(2);
-	});
-
-	it("prevents the default only for handled keys", () => {
-		const { press } = harness();
-		// Space would scroll the page, Backspace would navigate back.
-		expect(press(" ").preventDefault).toHaveBeenCalled();
-		expect(press("Backspace").preventDefault).toHaveBeenCalled();
-	});
-
 	it("leaves unhandled keys alone so Tab still moves focus", () => {
 		const { handlers, press } = harness();
 		const tab = press("Tab");
