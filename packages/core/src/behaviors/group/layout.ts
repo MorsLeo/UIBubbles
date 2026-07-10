@@ -1,6 +1,7 @@
+import { clampTop } from "$src/behaviors/clamp";
 import { chooseSide, getSnappedSide, sideRestLeft } from "$src/behaviors/snap";
 import { EDGE_MARGIN, ROW_GAP, STACK_OFFSET } from "$src/constants";
-import type { BubbleSide, GlideTarget, GroupMember } from "$src/types";
+import type { BubbleSide, GlideTarget, GroupMember, RowAnchor } from "$src/types";
 import { viewportHeight, viewportWidth } from "$src/viewport";
 
 /** Where the element already is — the no-op glide target. */
@@ -35,16 +36,51 @@ export const dockSlot = (
 	return { left: sideRestLeft(el, side), top };
 };
 
-/** Row slot: the open bubbles sit centered in a row along the top gap. */
-export const rowSlot = (member: GroupMember, row: GroupMember[]): GlideTarget => {
+/** Total width of the open row for a given member size. */
+const rowWidth = (memberWidth: number, count: number): number =>
+	count * memberWidth + (count - 1) * ROW_GAP;
+
+/** Keeps the whole row inside the horizontal edge gaps; an overflowing row centers. */
+const clampRowCenter = (centerX: number, total: number): number => {
+	const min = EDGE_MARGIN + total / 2;
+	const max = viewportWidth() - EDGE_MARGIN - total / 2;
+	if (min > max) return viewportWidth() / 2;
+	return Math.min(Math.max(centerX, min), max);
+};
+
+/**
+ * Row slot: the open bubbles sit in a row around the group's anchor —
+ * top-centered until a drag teaches the group another spot. The anchor
+ * is clamped at read time, so it survives resizes without going stale.
+ */
+export const rowSlot = (
+	member: GroupMember,
+	row: GroupMember[],
+	anchor?: RowAnchor
+): GlideTarget => {
 	const index = row.findIndex((m) => m.id === member.id);
 	if (index === -1) return restingPosition(member.el);
 
 	const width = member.el.offsetWidth;
-	const total = row.length * width + (row.length - 1) * ROW_GAP;
+	const total = rowWidth(width, row.length);
+	const centerX = clampRowCenter(anchor?.centerX ?? viewportWidth() / 2, total);
 	return {
-		left: (viewportWidth() - total) / 2 + index * (width + ROW_GAP),
-		top: EDGE_MARGIN
+		left: centerX - total / 2 + index * (width + ROW_GAP),
+		top: clampTop(member.el, anchor?.top ?? EDGE_MARGIN)
+	};
+};
+
+/** The row anchor a released member's landing implies: its slot lands exactly where it sits. */
+export const rowFromLanding = (member: GroupMember, row: GroupMember[]): RowAnchor => {
+	const rect = member.el.getBoundingClientRect();
+	const index = Math.max(
+		row.findIndex((m) => m.id === member.id),
+		0
+	);
+	const total = rowWidth(rect.width, row.length);
+	return {
+		centerX: rect.left - index * (rect.width + ROW_GAP) + total / 2,
+		top: rect.top
 	};
 };
 

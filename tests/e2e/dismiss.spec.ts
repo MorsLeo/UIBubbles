@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { bubble, dragToDismiss, settled } from "./helpers";
 
-// Drag-to-dismiss — the marquee gesture. Both paths: a docked stack drags as
-// a group (dismisses all), an open-row bubble dismisses individually.
+// Fork change (MorsLeo/UIBubbles): user dismissal is removed. The drag that
+// used to be the marquee dismiss gesture now just moves the bubbles — a
+// release at the old target spot snaps them back to an edge, fires no
+// dismiss/remove, and leaves every bubble alive.
 
 test.beforeEach(async ({ page }) => {
 	await page.goto("/");
@@ -12,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 const events = (page: import("@playwright/test").Page) =>
 	page.evaluate(() => window.bubbles.events());
 
-test("dragging a docked bubble onto the target dismisses it", async ({ page }) => {
+test("dragging a docked bubble onto the old target spot does not dismiss it", async ({ page }) => {
 	await page.evaluate(() => {
 		window.bubbles.create();
 		window.bubbles.add({ id: "a", label: "A", panelText: "A" });
@@ -20,22 +22,17 @@ test("dragging a docked bubble onto the target dismisses it", async ({ page }) =
 	await settled(page);
 
 	await dragToDismiss(page, "A");
+	await settled(page);
 
-	// The bubble leaves, and a "user" remove follows the commit-time dismiss.
-	await expect(bubble(page, "A")).toHaveCount(0);
+	await expect(bubble(page, "A")).toBeVisible();
 	const log = await events(page);
-	expect(log).toContainEqual({ event: "dismiss", detail: { id: "a" } });
-	expect(log).toContainEqual({ event: "remove", detail: { id: "a", reason: "user" } });
+	expect(log.filter((e) => e.event === "dismiss" || e.event === "remove")).toEqual([]);
 
-	// dismiss precedes remove.
-	const names = log.map((e) => e.event);
-	expect(names.indexOf("dismiss")).toBeLessThan(names.indexOf("remove"));
-
-	// Teardown leaves no animation loops running.
+	// No dismissal leaves no animation loops running either.
 	await expect.poll(() => page.evaluate(() => window.bubbles.liveFrames())).toBe(0);
 });
 
-test("dragging one open-row bubble dismisses only it", async ({ page }) => {
+test("dragging one open-row bubble onto the old target spot keeps the row intact", async ({ page }) => {
 	await page.evaluate(() => {
 		window.bubbles.create();
 		window.bubbles.add({ id: "a", label: "A", panelText: "A" });
@@ -46,11 +43,10 @@ test("dragging one open-row bubble dismisses only it", async ({ page }) => {
 	await settled(page);
 
 	await dragToDismiss(page, "A");
+	await settled(page);
 
-	await expect(bubble(page, "A")).toHaveCount(0);
+	await expect(bubble(page, "A")).toBeVisible();
 	await expect(bubble(page, "B")).toBeVisible();
-
 	const log = await events(page);
-	expect(log).toContainEqual({ event: "dismiss", detail: { id: "a" } });
-	expect(log.filter((e) => e.event === "dismiss")).toHaveLength(1);
+	expect(log.filter((e) => e.event === "dismiss")).toEqual([]);
 });

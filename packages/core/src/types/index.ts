@@ -23,11 +23,11 @@ export interface BubbleTheme {
 	panelText: string;
 	/** Drop shadow under the panel. */
 	panelShadow: string;
-	/** Fill of the drag-to-dismiss target circle. */
+	/** Unused in this fork (user dismissal is removed); kept for API compatibility. */
 	dismissSurface: string;
-	/** Border of the drag-to-dismiss target circle. */
+	/** Unused in this fork (user dismissal is removed); kept for API compatibility. */
 	dismissBorder: string;
-	/** Stroke of the X glyph inside the dismiss target. */
+	/** Unused in this fork (user dismissal is removed); kept for API compatibility. */
 	dismissIcon: string;
 }
 
@@ -99,7 +99,7 @@ export interface ResolvedBubblesOptions {
  * A bubble's icon or panel content. Either a ready `HTMLElement`, or a
  * render callback handed a fresh host element to populate — return a
  * teardown (e.g. a framework `unmount`) and the manager runs it when the
- * bubble is removed, dismissed, or the manager is destroyed. The callback
+ * bubble is removed or the manager is destroyed. The callback
  * form spares framework consumers from creating a host element and
  * tracking the unmount themselves.
  */
@@ -129,7 +129,10 @@ export interface BubbleOptions {
 	panelWidth?: PanelLength;
 	/** Overrides the manager's `panelMaxHeight` for this bubble's panel. */
 	panelMaxHeight?: PanelLength;
-	/** Fires after the user dismisses the bubble via the removal target. */
+	/**
+	 * Never called in this fork — user dismissal is removed, so bubbles
+	 * only leave via remove()/destroy(). Kept for API compatibility.
+	 */
 	onDismiss?: () => void;
 }
 
@@ -143,7 +146,10 @@ export type BubblesState = "docked" | "open";
 
 export type ArrowDirection = "left" | "right" | "up" | "down";
 
-/** Why a bubble left: the user dismissed it, or the consumer removed it. */
+/**
+ * Why a bubble left. In this fork every removal is "programmatic" —
+ * user dismissal is removed; "user" survives for API compatibility.
+ */
 export type BubbleRemoveReason = "user" | "programmatic";
 
 /**
@@ -172,21 +178,13 @@ export interface BubbleEvents {
 	/** A bubble was mounted by add(). Re-adds and reclaims don't fire it. */
 	add: { id: string };
 	/**
-	 * The user committed to dismissing a bubble — released it on the
-	 * removal target, or pressed Delete — fired the instant they commit,
-	 * before the exit animation. Only user gestures fire it (never
-	 * programmatic remove()/destroy()), and every dismiss is followed by
-	 * a remove with reason "user" for the same id once the bubble is
-	 * gone. Dragging the whole docked group onto the target fires one
-	 * dismiss per bubble. React here for snappy UI: the matching remove
-	 * lags behind the fly-off, this doesn't.
+	 * Never fired in this fork — user dismissal is removed, so there is
+	 * no gesture that commits one. Kept for API compatibility.
 	 */
 	dismiss: { id: string };
 	/**
 	 * A bubble finished leaving — fired once it's fully gone, after any
 	 * exit animation. A removal reversed by a re-add never fires it.
-	 * The bubble's own onDismiss callback runs synchronously at the
-	 * dismissal, so it precedes this event.
 	 */
 	remove: { id: string; reason: BubbleRemoveReason };
 }
@@ -198,8 +196,6 @@ export interface BubbleInstance {
 	/** Per-bubble panel sizing overrides; they win over the manager's. */
 	panelWidth?: PanelLength;
 	panelMaxHeight?: PanelLength;
-	/** Consumer callback for user-initiated dismissal. */
-	onDismiss?: () => void;
 	/** Teardowns from render-callback slots (icon, content); run on removal. */
 	teardowns?: Array<() => void>;
 }
@@ -226,17 +222,17 @@ export interface PanelController {
 export interface BubbleManager {
 	/**
 	 * True when the bubble is present after the call — newly added,
-	 * already mounted, or reclaimed mid-dismissal. False only when the
+	 * already mounted, or reclaimed mid-removal. False only when the
 	 * manager is at maxBubbles and the request was ignored. Re-adding a
-	 * mounted id refreshes `label`, `onDismiss`, and the panel sizing
-	 * overrides in place; the element, icon, and content live on.
+	 * mounted id refreshes `label` and the panel sizing overrides in
+	 * place; the element, icon, and content live on.
 	 */
 	add(options: BubbleOptions): boolean;
 	remove(id: string): void;
 	/**
 	 * Applies new options to the live manager — no remounting, no
-	 * re-entry animations. Theme and colors repaint every bubble, panel,
-	 * and the dismiss target in place; panel sizing reflows open panels;
+	 * re-entry animations. Theme and colors repaint every bubble and
+	 * panel in place; panel sizing reflows open panels;
 	 * maxBubbles governs future add() calls (a lower cap never evicts
 	 * live bubbles). `side` and `vertical` describe where a fresh flock
 	 * docks, so they take effect once every bubble is gone and the next
@@ -324,22 +320,14 @@ export interface DragHooks {
 	/**
 	 * Pointer left the dead zone and a real drag began. `coarse` is true
 	 * for direct-contact pointers (touch/pen). Return true to take over
-	 * positioning — the drag then only reports pointer moves and keeps
-	 * the dismiss target tracking, never writing the element's position.
+	 * positioning — the drag then only reports pointer moves, never
+	 * writing the element's position.
 	 */
 	onDragStart?: (x: number, y: number, coarse: boolean) => boolean | void;
 	/** Pointer moved during a taken-over drag. */
 	onDragMove?: (x: number, y: number) => void;
 	/** Return true to take over the release and suppress the throw. */
 	onDragEnd?: (velocity: Velocity) => boolean;
-	/**
-	 * Released while captured by the dismiss target — the commit. Fires
-	 * synchronously, before the bubble rides the target off-screen, so
-	 * consumers can react the instant the user lets go.
-	 */
-	onDismissCommit?: () => void;
-	/** The off-screen ride is done; the bubble can be removed now. */
-	onDismiss?: () => void;
 }
 
 /** A bubble as the group controller sees it. */
@@ -350,16 +338,6 @@ export interface GroupMember {
 }
 
 export interface GroupCallbacks {
-	/** Dismiss one bubble (fires its consumer onDismiss). */
-	remove(id: string): void;
-	/** Dismiss every bubble (group dragged onto the removal target). */
-	removeAll(): void;
-	/**
-	 * The user just committed to dismissing this bubble (capture release
-	 * or Delete), before the exit. Announce-only — removal still runs its
-	 * own path when the exit finishes.
-	 */
-	dismissed(id: string): void;
 	/**
 	 * The group's arrangement or active member changed. Carries no
 	 * payload: the manager diffs its own observable values at delivery
@@ -367,23 +345,23 @@ export interface GroupCallbacks {
 	 * reverting state() to the configured initialState).
 	 */
 	onChange(): void;
-	/**
-	 * Move focus to a sensible target when the flock empties with no member
-	 * left to take it (the last open-row bubble was deleted) — the element
-	 * focused before the flock was engaged, or a registered trigger.
-	 */
-	restoreFocus(): void;
+}
+
+/** Where the open row rests: the row's horizontal center and its top edge. */
+export interface RowAnchor {
+	centerX: number;
+	top: number;
 }
 
 /**
  * Coordinates all bubbles: docked stacking, trail drags, group flings,
- * and routing of taps/drags/dismissals from individual bubbles.
+ * and routing of taps/drags from individual bubbles.
  */
 export interface BubbleGroup {
 	addMember(member: GroupMember): void;
 	removeMember(id: string): void;
-	/** Centroid of the docked members (x center, bottom edge) — panels hang below it. */
-	attachPoint(): { x: number; bottom: number } | undefined;
+	/** Centroid of the docked members (x center, top and bottom edges) — panels hang off it. */
+	attachPoint(): { x: number; top: number; bottom: number } | undefined;
 	/** Animates the bubble off-screen, then calls `onGone` (programmatic removal). */
 	retireMember(id: string, onGone: () => void): void;
 	/** Reverses an in-flight retirement; true if the member was retiring. */
@@ -403,8 +381,6 @@ export interface BubbleGroup {
 	 * bubble or inside the panel. Never consumes the event.
 	 */
 	onOutsidePointer(target: EventTarget | null): void;
-	/** Dismisses an open-row bubble, moving focus to its neighbor. */
-	onDelete(id: string): void;
 	/** Expands or collapses the group, moving keyboard focus with it. */
 	toggle(): void;
 	/** The group's current arrangement. */
@@ -417,9 +393,6 @@ export interface BubbleGroup {
 	onDragStart(id: string, x: number, y: number, coarse: boolean): boolean;
 	onDragMove(x: number, y: number): void;
 	onDragEnd(id: string, velocity: Velocity): boolean;
-	/** The user committed to dismissing (capture release): announce the leaving set. */
-	onDismissCommit(id: string): void;
-	onDismiss(id: string): void;
 	handleResize(): void;
 }
 
@@ -441,32 +414,6 @@ export interface GroupFeedback {
 	setPressed(pressed: boolean): void;
 	/** Wires a member element's pointer events to the group-wide state. */
 	attach(el: HTMLElement): void;
-}
-
-/** Drives the bubble while the dismiss target holds it, or while it escapes back to the pointer. */
-export interface CaptureFollower {
-	/** Feed pointer positions; true while capture/escape owns the bubble's position. */
-	update(x: number, y: number): boolean;
-	/** Stops whichever simulation is running (release or drag end). */
-	cancel(): void;
-}
-
-/** The drag-to-dismiss target shown while a bubble is dragged. */
-export interface DismissZone {
-	/** Animates the target in from off-screen bottom (call at drag start). */
-	show(): void;
-	/** Repaints the target's colors in place. */
-	setTheme(theme: BubbleTheme): void;
-	/** Updates capture from the pointer position; true while captured. */
-	track(x: number, y: number): boolean;
-	captured(): boolean;
-	/** True from a captured release until the exit animation finishes. */
-	dismissing(): boolean;
-	/** Center of the target circle in viewport coordinates. */
-	center(): { x: number; y: number };
-	/** Animates the target back off-screen (call at release). `onHidden` fires once it's gone. */
-	hide(onHidden?: () => void): void;
-	destroy(): void;
 }
 
 export interface VelocityTracker {
