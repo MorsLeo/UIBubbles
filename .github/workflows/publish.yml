@@ -28,7 +28,7 @@ jobs:
       # Pinned to the 11.x major (currently 11.17.0) instead of @latest, so a
       # future npm major can't silently change the release.
       - run: npm install -g npm@11
-      - run: bun install --frozen-lockfile
+      - run: bun install
       # Same gate as CI (types + unit + build) so a release can't go out from a
       # commit CI would reject. (e2e stays in CI — it downloads a browser.)
       - run: bun run check
