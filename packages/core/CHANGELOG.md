@@ -7,6 +7,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-07-11
+
+### Removed
+
+- User dismissal is gone: no drag-to-dismiss target, no Delete/Backspace removal. Bubbles only
+  leave via the programmatic `remove()`/`destroy()` API.
+
+### Added
+
+- The open row docks anywhere: dragging an open bubble moves the row, its landing becomes the
+  row's new anchor, and the panel follows — flipping above the row when the bottom runs out of
+  room.
+
 ## [0.8.1] - 2026-06-18
 
 ### Fixed
