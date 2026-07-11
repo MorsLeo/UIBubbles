@@ -8,7 +8,39 @@ export const bubble = (page: Page, label: string) =>
 export const focusedLabel = (page: Page): Promise<string | null> =>
 	page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? null);
 
+/**
+ * Drags a bubble onto the spot where the upstream dismiss target used to
+ * rest (bottom-center) with a real pointer, in steps so the velocity
+ * tracker sees the motion, then releases. In this fork the gesture must
+ * only move the bubble — nothing is dismissed.
+ */
+export const dragToDismiss = async (page: Page, label: string): Promise<void> => {
+	const box = await bubble(page, label).boundingBox();
+	const vp = page.viewportSize();
+	if (!box || !vp) throw new Error(`cannot drag "${label}": no box/viewport`);
 
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(vp.width / 2, vp.height - 60, { steps: 24 });
+	await page.mouse.move(vp.width / 2, vp.height - 56, { steps: 4 });
+	await page.mouse.up();
+};
+
+/**
+ * Drags a bubble to an arbitrary point with a real pointer (stepped, so
+ * the drag threshold and velocity tracker both see the motion), then
+ * releases there.
+ */
+export const dragTo = async (page: Page, label: string, x: number, y: number): Promise<void> => {
+	const box = await bubble(page, label).boundingBox();
+	if (!box) throw new Error(`cannot drag "${label}": no box`);
+
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(x, y, { steps: 24 });
+	await page.mouse.move(x, y + 2, { steps: 4 });
+	await page.mouse.up();
+};
 
 /**
  * Resolves once every bubble has held its position for a few consecutive

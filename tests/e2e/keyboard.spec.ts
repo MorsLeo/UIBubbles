@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { bubble, focusedLabel, settled } from "./helpers";
 
 // Keyboard model: the open row is one tab stop with arrow-key roaming,
-// Enter/Space activates, Delete dismisses the focused bubble.
+// Enter/Space activates. Fork change: Delete/Backspace are inert — user
+// dismissal is removed.
 
 test.beforeEach(async ({ page }) => {
 	await page.goto("/");
@@ -33,7 +34,26 @@ test("arrow keys move focus across the open row", async ({ page }) => {
 	expect(await focusedLabel(page)).toBe("B");
 });
 
+test("Delete and Backspace no longer dismiss the focused row bubble", async ({ page }) => {
+	await page.evaluate(() => {
+		window.bubbles.create();
+		window.bubbles.add({ id: "a", label: "A", panelText: "A" });
+		window.bubbles.add({ id: "b", label: "B", panelText: "B" });
+		window.bubbles.toggle();
+	});
+	await expect.poll(() => page.evaluate(() => window.bubbles.state())).toBe("open");
+	await settled(page);
 
+	// Row B A; focus is on B (newest, active).
+	expect(await focusedLabel(page)).toBe("B");
+	await page.keyboard.press("Delete");
+	await page.keyboard.press("Backspace");
+
+	await expect(bubble(page, "B")).toBeVisible();
+	await expect(bubble(page, "A")).toBeVisible();
+	const log = await page.evaluate(() => window.bubbles.events());
+	expect(log.filter((e) => e.event === "dismiss" || e.event === "remove")).toEqual([]);
+});
 
 test("Enter on the docked stack expands it", async ({ page }) => {
 	await page.evaluate(() => {
